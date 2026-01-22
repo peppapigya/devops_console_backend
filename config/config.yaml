@@ -1,0 +1,65 @@
+# DevOps Console 配置文件
+# 支持环境变量覆盖，如: DEVOPS_DATABASE_HOST, DEVOPS_DATABASE_PORT, DEVOPS_DATABASE_USER, DEVOPS_DATABASE_PASSWORD, DEVOPS_DATABASE_NAME
+
+# 服务配置
+server:
+  port: ":8081"
+  log_level: "info"  # debug, info, warn, error
+
+# 数据库配置
+database:
+  type: "mysql"  # 仅支持MySQL
+  auto_migrate: true  # 是否自动迁移数据库模型
+
+  # MySQL配置
+  mysql:
+#    host: "mysql"  # Docker容器中的服务名
+#    port: 3306
+#    username: "devops"  # Docker环境中的用户
+#    password: "devops123456"  # Docker环境中的密码
+#    database: "devops_console"
+    host: "47.104.247.159"  # Docker容器中的服务名
+    port: 3306
+    username: "root"  # Docker环境中的用户
+    password: "peppa-pig"  # Docker环境中的密码
+    database: "devops_console"
+    charset: "utf8mb4"
+    parse_time: true
+    max_open_conns: 10
+    max_idle_conns: 5
+
+# 日志配置
+logging:
+  format: "json"  # json, text
+  time_format: "2006-01-02 15:04:05"
+  report_caller: true
+
+# 应用配置
+app:
+  name: "DevOps Console"
+  version: "1.0.0"
+  environment: "development"  # development, production
+
+# Elasticsearch配置
+elasticsearch:
+  timeout: 30  # 连接超时时间（秒）
+  retry: 3    # 重试次数
+  health_check_interval: 60  # 健康检查间隔（秒）
+
+# Kubernetes配置
+kubernetes:
+  config_path: ""  # kubeconfig文件路径，为空时使用集群内配置
+  timeout: 30      # 操作超时时间（秒）
+  retry: 3         # 重试次数
+
+# Swagger配置
+swagger:
+  enabled: true
+  host: "localhost:8081"
+  base_path: "/"
+
+# 健康检查配置
+health:
+  enabled: true
+  endpoint: "/health"
+  interval: 30  # 检查间隔（秒）
