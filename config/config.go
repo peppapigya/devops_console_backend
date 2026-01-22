@@ -591,13 +591,6 @@ func handleDatabaseError(err error) error {
 		"username": Config.Database.MySQL.Username,
 		"database": Config.Database.MySQL.Database,
 	}, "MySQL连接配置信息")
-
-	// 开发环境不panic，生产环境panic
-	if strings.ToLower(Config.Server.LogLevel) == "debug" || strings.ToLower(Config.Server.LogLevel) == "info" {
-		logs.Warning(nil, "开发环境检测到数据库错误，程序将继续运行但功能受限")
-		return nil
-	}
-
 	logs.Error(nil, "生产环境数据库初始化失败，程序退出")
 	return err
 }
