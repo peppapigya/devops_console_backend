@@ -5,7 +5,7 @@ import (
 	"crypto/tls"
 	"devops-console-backend/database"
 	"devops-console-backend/models"
-	"devops-console-backend/utils/logs"
+	"devops-console-backend/pkg/utils/logs"
 	"encoding/json"
 	"fmt"
 	"log"

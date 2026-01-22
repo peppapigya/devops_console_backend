@@ -1,7 +1,8 @@
 package instance
 
 import (
-	"devops-console-backend/utils/logs"
+	"devops-console-backend/pkg/utils/logs"
+
 	"github.com/gin-gonic/gin"
 )
 

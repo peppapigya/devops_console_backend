@@ -2,7 +2,7 @@ package utils
 
 import (
 	"devops-console-backend/common"
-	"devops-console-backend/utils/logs"
+	"devops-console-backend/pkg/utils/logs"
 
 	"github.com/gin-gonic/gin"
 )

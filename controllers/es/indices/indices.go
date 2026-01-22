@@ -7,7 +7,7 @@ import (
 	"devops-console-backend/config"
 	indices3 "devops-console-backend/models/indices"
 	req "devops-console-backend/models/request"
-	"devops-console-backend/utils/logs"
+	"devops-console-backend/pkg/utils/logs"
 	"encoding/json"
 	"fmt"
 

@@ -3,8 +3,8 @@ package deployment
 import (
 	"devops-console-backend/config"
 	"devops-console-backend/models/k8s"
-	"devops-console-backend/utils"
-	"devops-console-backend/utils/logs"
+	"devops-console-backend/pkg/utils"
+	"devops-console-backend/pkg/utils/logs"
 	"fmt"
 	"strconv"
 

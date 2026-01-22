@@ -5,9 +5,9 @@ import (
 	"devops-console-backend/database"
 	"devops-console-backend/models"
 	"devops-console-backend/models/request"
+	"devops-console-backend/pkg/utils"
+	"devops-console-backend/pkg/utils/logs"
 	"devops-console-backend/repositories"
-	"devops-console-backend/utils"
-	"devops-console-backend/utils/logs"
 	"errors"
 	"time"
 

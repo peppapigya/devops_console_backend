@@ -23,8 +23,8 @@ import (
 	"devops-console-backend/config"
 	"devops-console-backend/database"
 	_ "devops-console-backend/docs" // swagger docs
+	"devops-console-backend/pkg/utils/logs"
 	routers "devops-console-backend/routes"
-	"devops-console-backend/utils/logs"
 	websocket "devops-console-backend/websocket"
 	"time"
 

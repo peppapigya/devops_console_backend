@@ -3,7 +3,7 @@ package cluster
 import (
 	"devops-console-backend/config"
 	"devops-console-backend/models/k8s"
-	"devops-console-backend/utils"
+	"devops-console-backend/pkg/utils"
 	"fmt"
 	"strconv"
 	"strings"

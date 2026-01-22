@@ -1,9 +1,9 @@
 package instance
 
 import (
+	"devops-console-backend/pkg/utils"
+	"devops-console-backend/pkg/utils/logs"
 	"devops-console-backend/repositories"
-	"devops-console-backend/utils"
-	"devops-console-backend/utils/logs"
 	"errors"
 	"strconv"
 

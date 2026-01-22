@@ -4,7 +4,8 @@ package config
 import (
 	"devops-console-backend/database"
 	"devops-console-backend/models"
-	"devops-console-backend/utils/logs"
+	"devops-console-backend/pkg/utils/logs"
+	"devops-console-backend/pkg/utils/sql"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -291,7 +292,7 @@ func IsProductionMode() bool {
 func initDatabaseSchema(dbType string) error {
 	// 获取SQL脚本路径
 	_, filename, _, _ := runtime.Caller(0)
-	rootDir := filepath.Dir(filepath.Dir(filepath.Dir(filename)))
+	rootDir := filepath.Dir(filepath.Dir(filename))
 
 	sqlPath := filepath.Join(rootDir, "sql", "mysql.sql")
 
@@ -304,37 +305,12 @@ func initDatabaseSchema(dbType string) error {
 	sqlContent := string(sqlBytes)
 
 	// 执行MySQL脚本
-	return executeMySQLScript(sqlContent)
-}
-
-// executeMySQLScript 分批执行MySQL脚本
-func executeMySQLScript(sqlContent string) error {
-	// 按分号分割SQL语句，但要注意忽略注释中的分号
-	statements := splitSQLStatements(sqlContent)
-
-	for _, stmt := range statements {
-		stmt = strings.TrimSpace(stmt)
-		if stmt == "" || strings.HasPrefix(stmt, "--") || strings.HasPrefix(stmt, "/*") {
-			continue
-		}
-
-		err := database.GORMDB.Exec(stmt).Error
-		if err != nil {
-			// 检查是否是表已存在的错误
-			if isTableExistsError(err) {
-				logs.Info(map[string]interface{}{"statement": stmt}, "表已存在，跳过")
-				continue
-			}
-			return fmt.Errorf("执行SQL语句失败: %v\n语句: %s", err, stmt)
-		}
-	}
-
-	logs.Info(nil, "MySQL数据库表结构初始化完成")
-	return nil
+	return sqltils.ExecSQLScript(sqlContent)
 }
 
 // splitSQLStatements 分割SQL语句
 func splitSQLStatements(sqlContent string) []string {
+	sqlContent = removeComments(sqlContent)
 	// 使用正则表达式分割SQL语句，保留换行符
 	re := regexp.MustCompile(`;[\r\n]*`)
 	matches := re.Split(sqlContent, -1)
@@ -348,6 +324,15 @@ func splitSQLStatements(sqlContent string) []string {
 	}
 
 	return statements
+}
+
+// 移除注释，解决分割语句的时候报错
+func removeComments(sql string) string {
+	reLineComment := regexp.MustCompile(`(?m)--.*$`)
+	sql = reLineComment.ReplaceAllString(sql, "")
+	reBlockComment := regexp.MustCompile(`(?s)/\*.*?\*/`)
+	sql = reBlockComment.ReplaceAllString(sql, "")
+	return sql
 }
 
 // isTableExistsError 检查是否是表已存在的错误
@@ -365,19 +350,6 @@ func isTableExistsError(err error) bool {
 
 // autoMigrateModels 自动迁移GORM模型
 func autoMigrateModels() error {
-	// 禁用外键检查，避免迁移时的约束问题
-	if err := database.GORMDB.Exec("SET FOREIGN_KEY_CHECKS = 0").Error; err != nil {
-		logs.Warning(map[string]interface{}{"error": err.Error()}, "禁用外键检查失败")
-	}
-	defer func() {
-		if err := database.GORMDB.Exec("SET FOREIGN_KEY_CHECKS = 1").Error; err != nil {
-			logs.Warning(map[string]interface{}{"error": err.Error()}, "恢复外键检查失败")
-		}
-	}()
-
-	// 先删除可能导致冲突的外键约束
-	dropProblematicForeignKeys()
-
 	// 按顺序迁移模型，确保依赖关系正确
 	err := database.GORMDB.AutoMigrate(
 		&models.InstanceType{},
@@ -391,76 +363,7 @@ func autoMigrateModels() error {
 		return fmt.Errorf("GORM模型迁移失败: %v", err)
 	}
 
-	// 创建外键约束
-	if err := createForeignKeys(); err != nil {
-		logs.Warning(map[string]interface{}{"error": err.Error()}, "创建外键约束失败，但应用程序仍可正常运行")
-	}
-
 	logs.Info(nil, "GORM模型迁移完成")
-	return nil
-}
-
-// dropProblematicForeignKeys 删除可能导致冲突的外键约束
-func dropProblematicForeignKeys() {
-	// 查询并删除instances表的外键约束
-	var constraintName string
-	database.GORMDB.Raw("SELECT constraint_name FROM information_schema.table_constraints WHERE constraint_schema = DATABASE() AND table_name = 'instances' AND constraint_type = 'FOREIGN KEY'").Scan(&constraintName)
-	if constraintName != "" {
-		if err := database.GORMDB.Exec(fmt.Sprintf("ALTER TABLE instances DROP FOREIGN KEY %s", constraintName)).Error; err != nil {
-			logs.Debug(map[string]interface{}{"error": err.Error(), "constraint": constraintName}, "删除instances表外键约束失败")
-		} else {
-			logs.Info(map[string]interface{}{"constraint": constraintName}, "成功删除instances表外键约束")
-		}
-	}
-
-	// 查询并删除connection_tests表的外键约束
-	constraintName = ""
-	database.GORMDB.Raw("SELECT constraint_name FROM information_schema.table_constraints WHERE constraint_schema = DATABASE() AND table_name = 'connection_tests' AND constraint_type = 'FOREIGN KEY'").Scan(&constraintName)
-	if constraintName != "" {
-		if err := database.GORMDB.Exec(fmt.Sprintf("ALTER TABLE connection_tests DROP FOREIGN KEY %s", constraintName)).Error; err != nil {
-			logs.Debug(map[string]interface{}{"error": err.Error(), "constraint": constraintName}, "删除connection_tests表外键约束失败")
-		} else {
-			logs.Info(map[string]interface{}{"constraint": constraintName}, "成功删除connection_tests表外键约束")
-		}
-	}
-}
-
-// dropExistingForeignKeys 删除现有的外键约束
-func dropExistingForeignKeys() error {
-	// 获取所有外键约束
-	var constraints []struct {
-		TableName      string `gorm:"column:table_name"`
-		ConstraintName string `gorm:"column:constraint_name"`
-	}
-
-	database.GORMDB.Raw("SELECT table_name, constraint_name FROM information_schema.table_constraints WHERE constraint_schema = DATABASE() AND constraint_type = 'FOREIGN KEY'").Scan(&constraints)
-
-	// 删除每个外键约束
-	for _, c := range constraints {
-		sql := fmt.Sprintf("ALTER TABLE %s DROP FOREIGN KEY %s", c.TableName, c.ConstraintName)
-		if err := database.GORMDB.Exec(sql).Error; err != nil {
-			logs.Debug(map[string]interface{}{"table": c.TableName, "fk": c.ConstraintName, "error": err.Error()}, "删除外键约束失败")
-		}
-	}
-
-	return nil
-}
-
-// createForeignKeys 创建外键约束
-func createForeignKeys() error {
-	// 创建instances表的外键约束
-	if err := database.GORMDB.Exec("ALTER TABLE instances ADD CONSTRAINT fk_instances_instance_type FOREIGN KEY (instance_type_id) REFERENCES instance_types (id) ON DELETE RESTRICT ON UPDATE CASCADE").Error; err != nil {
-		logs.Warning(map[string]interface{}{"error": err.Error()}, "创建instances表外键约束失败")
-		return err
-	}
-
-	// 创建connection_tests表的外键约束
-	if err := database.GORMDB.Exec("ALTER TABLE connection_tests ADD CONSTRAINT fk_connection_tests_auth FOREIGN KEY (resource_type, resource_id) REFERENCES auth_configs (resource_type, resource_id) ON DELETE CASCADE").Error; err != nil {
-		logs.Warning(map[string]interface{}{"error": err.Error()}, "创建connection_tests表外键约束失败")
-		return err
-	}
-
-	logs.Info(nil, "外键约束创建完成")
 	return nil
 }
 

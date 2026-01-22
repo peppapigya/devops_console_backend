@@ -3,7 +3,7 @@ package namespace
 import (
 	"devops-console-backend/config"
 	"devops-console-backend/models/k8s"
-	"devops-console-backend/utils"
+	"devops-console-backend/pkg/utils"
 	"strconv"
 
 	"github.com/gin-gonic/gin"

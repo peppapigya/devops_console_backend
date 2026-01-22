@@ -2,8 +2,8 @@ package common
 
 import (
 	"devops-console-backend/common"
+	"devops-console-backend/pkg/utils/logs"
 	"devops-console-backend/repositories"
-	"devops-console-backend/utils/logs"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

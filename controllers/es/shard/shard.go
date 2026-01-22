@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"devops-console-backend/config"
-	"devops-console-backend/utils"
+	"devops-console-backend/pkg/utils"
 	"encoding/json"
 	"fmt"
 	"strconv"

@@ -5,7 +5,7 @@ import (
 	"devops-console-backend/common"
 	"devops-console-backend/config"
 	req "devops-console-backend/models/request"
-	"devops-console-backend/utils/logs"
+	"devops-console-backend/pkg/utils/logs"
 	"encoding/json"
 	"fmt"
 

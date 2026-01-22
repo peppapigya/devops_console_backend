@@ -2,15 +2,16 @@ package config
 
 import (
 	"devops-console-backend/models"
+	"devops-console-backend/pkg/utils/logs"
 	"devops-console-backend/repositories"
-	"devops-console-backend/utils/logs"
 	"encoding/json"
 	"fmt"
+	"strings"
+	"sync"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
-	"strings"
-	"sync"
 )
 
 var (

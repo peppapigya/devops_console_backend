@@ -3,8 +3,8 @@ package elasticsearch
 import (
 	"context"
 	"devops-console-backend/config"
-	"devops-console-backend/utils"
-	"devops-console-backend/utils/logs"
+	"devops-console-backend/pkg/utils"
+	"devops-console-backend/pkg/utils/logs"
 	"encoding/json"
 	"fmt"
 	"strconv"
