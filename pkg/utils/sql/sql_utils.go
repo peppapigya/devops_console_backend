@@ -1,13 +1,11 @@
 package sqltils
 
 import (
-	"devops-console-backend/database"
+	"devops-console-backend/pkg/configs"
 	"strings"
 
 	"github.com/xwb1989/sqlparser"
 )
-
-const ()
 
 // SplitAllStatements 分割sql语句到多个字符串
 func SplitAllStatements(sql string) ([]string, error) {
@@ -38,7 +36,7 @@ func ExecSQLScript(sqlContent string) error {
 	}
 
 	for _, stmt := range stmts {
-		database.GORMDB.Exec(stmt)
+		configs.GORMDB.Exec(stmt)
 	}
 	return nil
 }

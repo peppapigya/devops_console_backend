@@ -63,3 +63,20 @@ health:
   enabled: true
   endpoint: "/health"
   interval: 30  # 检查间隔（秒）
+
+redis:
+  host: 39.103.56.192
+  port: 8001
+  password:
+  db: 0
+
+jwt:
+  secret: "n02y2Zqf4eL0hZ4xjQH9w1zDk1w5FqMnc9R+N8T1v2E="
+  expire-time: 3600 # 单位为秒
+  refresh-expire-time: 604800
+  exclude-paths:
+    - /api/v1/sysUser/login
+    - /api/v1/sysUser/refresh
+    - /api/v1/sysUser/captcha
+    - /swagger/*
+    - /jobs/script/
