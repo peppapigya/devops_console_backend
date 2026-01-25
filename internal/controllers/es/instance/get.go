@@ -1,7 +1,7 @@
 package instance
 
 import (
-	"devops-console-backend/internal/models"
+	"devops-console-backend/internal/dal"
 	"devops-console-backend/pkg/configs"
 	"devops-console-backend/pkg/utils"
 	"devops-console-backend/pkg/utils/logs"
@@ -63,7 +63,7 @@ func Get(r *gin.Context) {
 }
 
 // getInstanceDetail 获取实例详情
-func getInstanceDetail(id uint) (*models.ResourceDetail, error) {
+func getInstanceDetail(id uint) (*dal.ResourceDetail, error) {
 	instanceDetailRepo := configs.NewInstanceDetailRepository()
 	instanceDetail, err := instanceDetailRepo.GetByID(id)
 	if err != nil {

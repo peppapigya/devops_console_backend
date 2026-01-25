@@ -28,3 +28,6 @@ func CloseRedis() {
 		return
 	}
 }
+func GetRedisClient() *redis.Client {
+	return redisClient
+}

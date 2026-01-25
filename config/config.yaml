@@ -65,9 +65,9 @@ health:
   interval: 30  # 检查间隔（秒）
 
 redis:
-  host: 39.103.56.192
-  port: 8001
-  password:
+  host: 127.0.0.1
+  port: 6379
+  password: "123456"
   db: 0
 
 jwt:
@@ -75,7 +75,7 @@ jwt:
   expire-time: 3600 # 单位为秒
   refresh-expire-time: 604800
   exclude-paths:
-    - /api/v1/sysUser/login
+    - /api/v1/system/login
     - /api/v1/sysUser/refresh
     - /api/v1/sysUser/captcha
     - /swagger/*

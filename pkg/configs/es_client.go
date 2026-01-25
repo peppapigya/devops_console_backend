@@ -3,7 +3,7 @@ package configs
 import (
 	"context"
 	"crypto/tls"
-	"devops-console-backend/internal/models"
+	"devops-console-backend/internal/dal"
 	"devops-console-backend/pkg/utils/logs"
 	"encoding/json"
 	"fmt"
@@ -49,7 +49,7 @@ func InitEsClients() {
 }
 
 // 创建 es 客户端
-func createEsClient(instanceDetail models.ResourceDetail) (*elasticsearch.Client, error) {
+func createEsClient(instanceDetail dal.ResourceDetail) (*elasticsearch.Client, error) {
 	// 从Address字段获取地址，需要先转换为字符串
 	var addr string
 	if instanceDetail.Address != nil {
@@ -133,8 +133,8 @@ func createEsClient(instanceDetail models.ResourceDetail) (*elasticsearch.Client
 }
 
 // 解析认证配置
-func parseAuthConfigs(authConfigsStr string) map[string]models.AuthConfig {
-	authConfigs := make(map[string]models.AuthConfig)
+func parseAuthConfigs(authConfigsStr string) map[string]dal.AuthConfig {
+	authConfigs := make(map[string]dal.AuthConfig)
 
 	// 认证配置是以JSON格式存储的
 	if authConfigsStr == "" {
@@ -147,7 +147,7 @@ func parseAuthConfigs(authConfigsStr string) map[string]models.AuthConfig {
 		// JSON格式解析成功
 		for authType, configData := range jsonConfigs {
 			if configValue, ok := configData["config_value"].(string); ok {
-				authConfigs[authType] = models.AuthConfig{
+				authConfigs[authType] = dal.AuthConfig{
 					ConfigKey:   authType,
 					ConfigValue: configValue,
 				}
@@ -167,7 +167,7 @@ func parseAuthConfigs(authConfigsStr string) map[string]models.AuthConfig {
 		value := pair[colonIndex+1:]
 
 		if strings.HasPrefix(strings.TrimSpace(value), "{") {
-			authConfigs[key] = models.AuthConfig{
+			authConfigs[key] = dal.AuthConfig{
 				ConfigKey:   key,
 				ConfigValue: value,
 			}
@@ -175,7 +175,7 @@ func parseAuthConfigs(authConfigsStr string) map[string]models.AuthConfig {
 		}
 
 		// 普通 key:value 格式
-		authConfigs[key] = models.AuthConfig{
+		authConfigs[key] = dal.AuthConfig{
 			ConfigKey:   key,
 			ConfigValue: value,
 		}
@@ -242,7 +242,7 @@ func closeEsClient(client *elasticsearch.Client) {
 }
 
 // CreateEsClient 封装内部
-func CreateEsClient(authConfig models.AuthConfig) (*elasticsearch.Client, error) {
+func CreateEsClient(authConfig dal.AuthConfig) (*elasticsearch.Client, error) {
 
 	if authConfig.ResourceID == 0 {
 		return nil, fmt.Errorf("invalid resource id: %d", authConfig.ResourceID)
@@ -330,16 +330,16 @@ func SafeDeleteEsClient(instanceID uint) {
 }
 
 // getElasticsearchInstances 获取所有Elasticsearch实例
-func getElasticsearchInstances() ([]models.ResourceDetail, error) {
+func getElasticsearchInstances() ([]dal.ResourceDetail, error) {
 	// 使用原生SQL查询避免循环依赖
-	var instanceDetails []models.ResourceDetail
+	var instanceDetails []dal.ResourceDetail
 	err := GORMDB.Where("resource_type = ? AND resource_subtype = ?", "instance", "elasticsearch").Find(&instanceDetails).Error
 	return instanceDetails, err
 }
 
 // getInstanceDetailByID 根据ID获取实例详情
-func getInstanceDetailByID(id uint) (*models.ResourceDetail, error) {
-	var instanceDetail models.ResourceDetail
+func getInstanceDetailByID(id uint) (*dal.ResourceDetail, error) {
+	var instanceDetail dal.ResourceDetail
 	err := GORMDB.Where("resource_id = ? AND resource_type = ?", id, "instance").First(&instanceDetail).Error
 	if err != nil {
 		return nil, err

@@ -1,4 +1,4 @@
-package models
+package dal
 
 // ClusterSimpleResult 集群简单结果
 type ClusterSimpleResult struct {

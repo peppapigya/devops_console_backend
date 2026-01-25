@@ -6,4 +6,7 @@ var (
 )
 
 // redis key
-var ()
+var (
+	LoginAccessPrefix  = "login:access:"
+	LoginRefreshPrefix = "login:refresh:"
+)

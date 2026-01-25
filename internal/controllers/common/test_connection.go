@@ -2,8 +2,8 @@ package common
 
 import (
 	"crypto/tls"
-	"devops-console-backend/internal/models"
-	"devops-console-backend/internal/models/request"
+	"devops-console-backend/internal/dal"
+	"devops-console-backend/internal/dal/request"
 	"devops-console-backend/pkg/configs"
 	"devops-console-backend/pkg/utils"
 	"devops-console-backend/pkg/utils/logs"
@@ -79,7 +79,7 @@ func TestConnection(r *gin.Context) {
 		responseTimePtr = &responseTimeInt
 	}
 
-	testRecord := models.ConnectionTest{
+	testRecord := dal.ConnectionTest{
 		ResourceType: "instance",
 		ResourceID:   uint(req.InstanceID),
 		TestResult:   string(result),
@@ -125,7 +125,7 @@ func TestConnection(r *gin.Context) {
 }
 
 // validateInstanceExists 验证实例是否存在
-func validateInstanceExists(instanceID uint) (*models.Instance, error) {
+func validateInstanceExists(instanceID uint) (*dal.Instance, error) {
 	instanceRepo := configs.NewInstanceRepository()
 	instance, err := instanceRepo.GetByID(instanceID)
 	if err != nil {
@@ -138,7 +138,7 @@ func validateInstanceExists(instanceID uint) (*models.Instance, error) {
 }
 
 // getAuthConfig 获取认证配置
-func getAuthConfig(instanceID uint) (*models.AuthConfig, error) {
+func getAuthConfig(instanceID uint) (*dal.AuthConfig, error) {
 	authConfigRepo := configs.NewAuthConfigRepository()
 	authConfigs, err := authConfigRepo.GetByInstanceID(instanceID)
 	if err != nil {
@@ -151,7 +151,7 @@ func getAuthConfig(instanceID uint) (*models.AuthConfig, error) {
 }
 
 // performConnectionTest 执行连接测试
-func performConnectionTest(instance *models.Instance, authConfig *models.AuthConfig) (string, int64, string) {
+func performConnectionTest(instance *dal.Instance, authConfig *dal.AuthConfig) (string, int64, string) {
 	// 检查是否为 Kubernetes 类型
 	instanceDetailRepo := configs.NewInstanceDetailRepository()
 	instanceDetail, err := instanceDetailRepo.GetByID(instance.ID)
@@ -291,7 +291,7 @@ func performConnectionTest(instance *models.Instance, authConfig *models.AuthCon
 }
 
 // performKubernetesConnectionTest 执行 Kubernetes 连接测试
-func performKubernetesConnectionTest(instance *models.Instance, authConfig *models.AuthConfig) (string, int64, string) {
+func performKubernetesConnectionTest(instance *dal.Instance, authConfig *dal.AuthConfig) (string, int64, string) {
 	startTime := time.Now()
 
 	// 检查认证配置
@@ -340,7 +340,7 @@ func performKubernetesConnectionTest(instance *models.Instance, authConfig *mode
 }
 
 // saveTestRecord 保存测试记录
-func saveTestRecord(testRecord *models.ConnectionTest) error {
+func saveTestRecord(testRecord *dal.ConnectionTest) error {
 	connectionTestRepo := configs.NewConnectionTestRepository()
 	if err := connectionTestRepo.Create(testRecord); err != nil {
 		return fmt.Errorf("保存测试记录失败: %w", err)

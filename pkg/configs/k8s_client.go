@@ -1,7 +1,7 @@
 package configs
 
 import (
-	"devops-console-backend/internal/models"
+	"devops-console-backend/internal/dal"
 	"devops-console-backend/pkg/utils/logs"
 	"encoding/json"
 	"fmt"
@@ -143,7 +143,7 @@ func GetK8sClient(instanceID uint) (*kubernetes.Clientset, bool) {
 }
 
 // AddK8sClient 添加新的K8s客户端
-func AddK8sClient(instance *models.Instance, authConfig *models.AuthConfig) error {
+func AddK8sClient(instance *dal.Instance, authConfig *dal.AuthConfig) error {
 	k8sClientsLock.Lock()
 	defer k8sClientsLock.Unlock()
 

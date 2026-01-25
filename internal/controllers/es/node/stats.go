@@ -3,7 +3,7 @@ package node
 import (
 	"context"
 	"devops-console-backend/internal/common"
-	req "devops-console-backend/internal/models/request"
+	req "devops-console-backend/internal/dal/request"
 	"devops-console-backend/pkg/configs"
 	"devops-console-backend/pkg/utils/logs"
 	"encoding/json"

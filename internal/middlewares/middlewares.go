@@ -3,7 +3,11 @@ package middlewares
 
 import (
 	"devops-console-backend/internal/common"
+	"devops-console-backend/internal/dal/redis"
+	"devops-console-backend/pkg/database"
 	"devops-console-backend/pkg/utils/jwt"
+	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -11,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthMiddleware 认证中间件
+// Authenticate  认证中间件
 func Authenticate(excludePaths ...string) gin.HandlerFunc {
 	excludePathRegex := make([]*regexp.Regexp, 0)
 	for _, path := range excludePaths {
@@ -30,8 +34,8 @@ func Authenticate(excludePaths ...string) gin.HandlerFunc {
 		token := c.GetHeader(common.TokenKey)
 		token, found := strings.CutPrefix(token, "Bearer ")
 		if token == "" && !found {
+			log.Print("token not found")
 			common.Fail(c, common.UNAUTHORIZED)
-			// 终端整个请求链
 			c.Abort()
 			return
 		}
@@ -41,9 +45,29 @@ func Authenticate(excludePaths ...string) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
+		// 如果redis中有数据，执行用户下线操作
+		//redisOperator(claims, c, token)
 		// 将解析的用户信息设置到上下文中
 		c.Set(common.UserInfoKey, claims)
 		c.Next()
+	}
+}
+
+// redis 相关操作
+func redisOperator(claim *jwt.Claims, c *gin.Context, token string) {
+	client := database.GetRedisClient()
+	if client == nil {
+		panic("redis 客户端未初始化")
+		return
+	}
+	key := fmt.Sprintf("%v:%v", common.LoginAccessPrefix, claim.GetUserId())
+	redisClient := redis.NewClient(client)
+	value := redisClient.Get(key, false)
+	if value != token {
+		_ = redisClient.Delete(key)
+		c.AbortWithStatusJSON(401, gin.H{"msg": "账号已在其他地方登录"})
+		c.Abort()
+		return
 	}
 }
 

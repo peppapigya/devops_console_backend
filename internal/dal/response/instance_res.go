@@ -1,7 +1,7 @@
 package response
 
 import (
-	"devops-console-backend/internal/models"
+	"devops-console-backend/internal/dal"
 	"time"
 )
 
@@ -28,7 +28,7 @@ type InstanceItemResponse struct {
 }
 
 // NewInstanceListResponse 创建集群列表响应
-func NewInstanceListResponse(page, pageSize int, total int64, instances []models.Instance, instanceTypes map[uint64]string) *InstanceListResponse {
+func NewInstanceListResponse(page, pageSize int, total int64, instances []dal.Instance, instanceTypes map[uint64]string) *InstanceListResponse {
 	// 处理边界情况：如果pageSize为0，避免除零错误
 	if pageSize <= 0 {
 		pageSize = 10

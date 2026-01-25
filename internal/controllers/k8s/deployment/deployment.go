@@ -1,7 +1,7 @@
 package deployment
 
 import (
-	"devops-console-backend/internal/models/k8s"
+	"devops-console-backend/internal/dal/request/k8s"
 	"devops-console-backend/pkg/configs"
 	"devops-console-backend/pkg/utils"
 	"devops-console-backend/pkg/utils/logs"

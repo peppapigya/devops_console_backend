@@ -3,6 +3,7 @@ package utils
 import (
 	"devops-console-backend/internal/common"
 	"devops-console-backend/pkg/utils/logs"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -47,6 +48,13 @@ func (rh *ResponseHelper) Error(status int, message string) {
 	response.Status = status
 	response.Message = message
 	rh.GinContext.JSON(200, response)
+}
+
+func (rh *ResponseHelper) Fail(constant *common.ErrorCode) {
+	response := common.NewReturnData()
+	response.Status = constant.Code
+	response.Message = constant.Msg
+	rh.GinContext.JSON(http.StatusInternalServerError, response)
 }
 
 // BadRequest 400错误响应

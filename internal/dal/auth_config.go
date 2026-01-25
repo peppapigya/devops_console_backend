@@ -1,4 +1,4 @@
-package models
+package dal
 
 // 认证类型常量
 const (

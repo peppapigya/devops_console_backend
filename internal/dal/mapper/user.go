@@ -20,5 +20,12 @@ func NewUserMapper(db *gorm.DB) *UserMapper {
 }
 
 func (user *UserMapper) GetUserByUsername(username string) (*model.SystemUser, error) {
-	return nil, nil
+	userQuery := user.query.SystemUser
+	return userQuery.Where(userQuery.Username.Eq(username)).First()
+}
+
+// ===================  systemUserToken ===================
+
+func (user *UserMapper) InsertSystemUserToken(userToken *model.SystemUserToken) error {
+	return user.query.SystemUserToken.Create(userToken)
 }

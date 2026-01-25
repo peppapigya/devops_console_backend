@@ -1,8 +1,8 @@
 package instance
 
 import (
-	"devops-console-backend/internal/models"
-	"devops-console-backend/internal/models/request"
+	"devops-console-backend/internal/dal"
+	"devops-console-backend/internal/dal/request"
 	"devops-console-backend/pkg/configs"
 	"devops-console-backend/pkg/utils"
 	"devops-console-backend/pkg/utils/logs"
@@ -14,7 +14,7 @@ import (
 )
 
 // addOrUpdateK8sClient 添加或更新k8s客户端
-func addOrUpdateK8sClient(instance *models.Instance, authConfig *models.AuthConfig) error {
+func addOrUpdateK8sClient(instance *dal.Instance, authConfig *dal.AuthConfig) error {
 	if authConfig.AuthType != "kubeconfig" {
 		return nil
 	}
@@ -105,7 +105,7 @@ func addInstance(repo *configs.InstanceRepository, req request.InstanceRequest) 
 	}
 
 	// 创建实例
-	instance := &models.Instance{
+	instance := &dal.Instance{
 		InstanceTypeID: req.InstanceTypeID,
 		Name:           req.Name,
 		Address:        req.Address,
@@ -204,8 +204,8 @@ func handleAuthConfig(repo *configs.AuthConfigRepository, instanceID uint, authC
 	}
 
 	now := time.Time{}
-	var instance *models.Instance
-	var newAuthConfig *models.AuthConfig
+	var instance *dal.Instance
+	var newAuthConfig *dal.AuthConfig
 
 	if len(existingConfigs) > 0 {
 		// 更新现有配置
@@ -230,7 +230,7 @@ func handleAuthConfig(repo *configs.AuthConfigRepository, instanceID uint, authC
 			return errors.New("获取实例信息失败: " + err.Error())
 		}
 
-		newAuthConfig = &models.AuthConfig{
+		newAuthConfig = &dal.AuthConfig{
 			ResourceType: "instance",
 			ResourceID:   instanceID,
 			ResourceName: instance.Name,
@@ -258,7 +258,7 @@ func handleAuthConfig(repo *configs.AuthConfigRepository, instanceID uint, authC
 	}
 
 	// 检查是否是kubernetes实例 - 手动查询实例类型
-	var instanceType models.InstanceType
+	var instanceType dal.InstanceType
 	if err := configs.GORMDB.First(&instanceType, instance.InstanceTypeID).Error; err == nil && instanceType.TypeName == "kubernetes" {
 		if authConfig.AuthType == "kubeconfig" {
 			// 添加或更新k8s客户端

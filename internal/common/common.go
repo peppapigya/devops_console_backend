@@ -23,18 +23,18 @@ func NewReturnData() ReturnData {
 }
 
 type Response struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Data interface{} `json:"data"`
+	Status  int         `json:"status"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
 }
 
 func Success(c *gin.Context, data interface{}) {
 	c.JSON(
 		http.StatusOK,
 		Response{
-			Code: 200,
-			Msg:  "success",
-			Data: data,
+			Status:  200,
+			Message: "success",
+			Data:    data,
 		},
 	)
 }
@@ -43,9 +43,9 @@ func Fail(c *gin.Context, code *ErrorCode) {
 	c.JSON(
 		http.StatusOK,
 		Response{
-			Code: code.Code,
-			Msg:  code.Msg,
-			Data: nil,
+			Status:  code.Code,
+			Message: code.Msg,
+			Data:    nil,
 		},
 	)
 }
@@ -58,9 +58,9 @@ func FailWithMsg(c *gin.Context, msg string) {
 	c.JSON(
 		http.StatusOK,
 		Response{
-			Code: 500,
-			Msg:  msg,
-			Data: nil,
+			Status:  500,
+			Message: msg,
+			Data:    nil,
 		},
 	)
 }

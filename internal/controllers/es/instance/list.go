@@ -1,9 +1,9 @@
 package instance
 
 import (
-	"devops-console-backend/internal/models"
-	"devops-console-backend/internal/models/request"
-	"devops-console-backend/internal/models/response"
+	"devops-console-backend/internal/dal"
+	"devops-console-backend/internal/dal/request"
+	"devops-console-backend/internal/dal/response"
 	"devops-console-backend/pkg/configs"
 	"devops-console-backend/pkg/utils"
 	"devops-console-backend/pkg/utils/logs"
@@ -68,7 +68,7 @@ func List(r *gin.Context) {
 		instanceTypeIDs = append(instanceTypeIDs, instance.InstanceTypeID)
 	}
 
-	var instanceTypesList []models.InstanceType
+	var instanceTypesList []dal.InstanceType
 	if err := configs.GORMDB.Where("id IN ?", instanceTypeIDs).Find(&instanceTypesList).Error; err == nil {
 		for _, instanceType := range instanceTypesList {
 			instanceTypes[uint64(instanceType.ID)] = instanceType.TypeName

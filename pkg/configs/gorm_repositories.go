@@ -2,7 +2,7 @@ package configs
 
 // todo 后续要实现业务的解耦，会出现循环依赖
 import (
-	"devops-console-backend/internal/models"
+	"devops-console-backend/internal/dal"
 	"encoding/json"
 	"time"
 
@@ -18,15 +18,15 @@ func NewInstanceTypeRepository() *InstanceTypeRepository {
 }
 
 // GetAll 获取所有实例类型
-func (r *InstanceTypeRepository) GetAll() ([]models.InstanceType, error) {
-	var types []models.InstanceType
+func (r *InstanceTypeRepository) GetAll() ([]dal.InstanceType, error) {
+	var types []dal.InstanceType
 	err := GORMDB.Order("type_name").Find(&types).Error
 	return types, err
 }
 
 // GetByID 根据ID获取实例类型
-func (r *InstanceTypeRepository) GetByID(id uint) (*models.InstanceType, error) {
-	var instanceType models.InstanceType
+func (r *InstanceTypeRepository) GetByID(id uint) (*dal.InstanceType, error) {
+	var instanceType dal.InstanceType
 	err := GORMDB.Where("id = ?", id).First(&instanceType).Error
 	if err != nil {
 		return nil, err
@@ -35,8 +35,8 @@ func (r *InstanceTypeRepository) GetByID(id uint) (*models.InstanceType, error) 
 }
 
 // GetByName 根据名称获取实例类型
-func (r *InstanceTypeRepository) GetByName(typeName string) (*models.InstanceType, error) {
-	var instanceType models.InstanceType
+func (r *InstanceTypeRepository) GetByName(typeName string) (*dal.InstanceType, error) {
+	var instanceType dal.InstanceType
 	err := GORMDB.Where("type_name = ?", typeName).First(&instanceType).Error
 	if err != nil {
 		return nil, err
@@ -45,18 +45,18 @@ func (r *InstanceTypeRepository) GetByName(typeName string) (*models.InstanceTyp
 }
 
 // Create 创建实例类型
-func (r *InstanceTypeRepository) Create(instanceType *models.InstanceType) error {
+func (r *InstanceTypeRepository) Create(instanceType *dal.InstanceType) error {
 	return GORMDB.Create(instanceType).Error
 }
 
 // Update 更新实例类型
-func (r *InstanceTypeRepository) Update(instanceType *models.InstanceType) error {
+func (r *InstanceTypeRepository) Update(instanceType *dal.InstanceType) error {
 	return GORMDB.Save(instanceType).Error
 }
 
 // Delete 根据ID删除实例类型
 func (r *InstanceTypeRepository) Delete(id uint) error {
-	return GORMDB.Delete(&models.InstanceType{}, id).Error
+	return GORMDB.Delete(&dal.InstanceType{}, id).Error
 }
 
 // InstanceRepository 实例GORM操作
@@ -68,33 +68,33 @@ func NewInstanceRepository() *InstanceRepository {
 }
 
 // GetAll 获取所有实例
-func (r *InstanceRepository) GetAll() ([]models.Instance, error) {
-	var instances []models.Instance
+func (r *InstanceRepository) GetAll() ([]dal.Instance, error) {
+	var instances []dal.Instance
 	err := GORMDB.Find(&instances).Error
 	return instances, err
 }
 
 // GetByID 根据ID获取实例
-func (r *InstanceRepository) GetByID(id uint) (*models.Instance, error) {
-	var instance models.Instance
+func (r *InstanceRepository) GetByID(id uint) (*dal.Instance, error) {
+	var instance dal.Instance
 	err := GORMDB.Where("id = ?", id).First(&instance).Error
 	return &instance, err
 }
 
 // GetByName 根据名称获取实例
-func (r *InstanceRepository) GetByName(name string) (*models.Instance, error) {
-	var instance models.Instance
+func (r *InstanceRepository) GetByName(name string) (*dal.Instance, error) {
+	var instance dal.Instance
 	err := GORMDB.Where("name = ?", name).First(&instance).Error
 	return &instance, err
 }
 
 // Create 创建实例
-func (r *InstanceRepository) Create(instance *models.Instance) error {
+func (r *InstanceRepository) Create(instance *dal.Instance) error {
 	return GORMDB.Create(instance).Error
 }
 
 // Update 更新实例
-func (r *InstanceRepository) Update(instance *models.Instance) error {
+func (r *InstanceRepository) Update(instance *dal.Instance) error {
 	return GORMDB.Save(instance).Error
 }
 
@@ -102,38 +102,38 @@ func (r *InstanceRepository) Update(instance *models.Instance) error {
 func (r *InstanceRepository) Delete(id uint) error {
 	return GORMDB.Transaction(func(tx *gorm.DB) error {
 		// 删除关联的认证配置
-		if err := tx.Where("resource_type = ? AND resource_id = ?", "instance", id).Delete(&models.AuthConfig{}).Error; err != nil {
+		if err := tx.Where("resource_type = ? AND resource_id = ?", "instance", id).Delete(&dal.AuthConfig{}).Error; err != nil {
 			return err
 		}
 		// 删除关联的连接测试记录
-		if err := tx.Where("resource_type = ? AND resource_id = ?", "instance", id).Delete(&models.ConnectionTest{}).Error; err != nil {
+		if err := tx.Where("resource_type = ? AND resource_id = ?", "instance", id).Delete(&dal.ConnectionTest{}).Error; err != nil {
 			return err
 		}
 		// 删除实例
-		return tx.Delete(&models.Instance{}, id).Error
+		return tx.Delete(&dal.Instance{}, id).Error
 	})
 }
 
 // GetByTypeID 根据类型ID获取实例列表
-func (r *InstanceRepository) GetByTypeID(typeID uint) ([]models.Instance, error) {
-	var instances []models.Instance
+func (r *InstanceRepository) GetByTypeID(typeID uint) ([]dal.Instance, error) {
+	var instances []dal.Instance
 	err := GORMDB.Where("instance_type_id = ?", typeID).Find(&instances).Error
 	return instances, err
 }
 
 // GetByStatus 根据状态获取实例列表
-func (r *InstanceRepository) GetByStatus(status string) ([]models.Instance, error) {
-	var instances []models.Instance
+func (r *InstanceRepository) GetByStatus(status string) ([]dal.Instance, error) {
+	var instances []dal.Instance
 	err := GORMDB.Where("status = ?", status).Find(&instances).Error
 	return instances, err
 }
 
 // GetWithPagination 分页获取实例
-func (r *InstanceRepository) GetWithPagination(offset, limit int, filters map[string]interface{}) ([]models.Instance, int64, error) {
-	var instances []models.Instance
+func (r *InstanceRepository) GetWithPagination(offset, limit int, filters map[string]interface{}) ([]dal.Instance, int64, error) {
+	var instances []dal.Instance
 	var total int64
 
-	query := GORMDB.Model(&models.Instance{})
+	query := GORMDB.Model(&dal.Instance{})
 
 	// 应用过滤条件
 	if name, ok := filters["name"].(string); ok && name != "" {
@@ -166,8 +166,8 @@ func NewResourceRepository() *ResourceRepository {
 }
 
 // GetResourceDetails 获取资源详情列表
-func (r *ResourceRepository) GetResourceDetails(filter *models.ResourceFilter) ([]models.ResourceDetail, error) {
-	var details []models.ResourceDetail
+func (r *ResourceRepository) GetResourceDetails(filter *dal.ResourceFilter) ([]dal.ResourceDetail, error) {
+	var details []dal.ResourceDetail
 	query := GORMDB.Table("resource_details")
 
 	// 应用过滤条件
@@ -188,8 +188,8 @@ func (r *ResourceRepository) GetResourceDetails(filter *models.ResourceFilter) (
 }
 
 // GetResourceDetailByID 根据资源ID和类型获取详情
-func (r *ResourceRepository) GetResourceDetailByID(resourceType string, resourceID int) (*models.ResourceDetail, error) {
-	var detail models.ResourceDetail
+func (r *ResourceRepository) GetResourceDetailByID(resourceType string, resourceID int) (*dal.ResourceDetail, error) {
+	var detail dal.ResourceDetail
 	err := GORMDB.Table("resource_details").
 		Where("resource_type = ? AND resource_id = ?", resourceType, resourceID).
 		First(&detail).Error
@@ -200,17 +200,17 @@ func (r *ResourceRepository) GetResourceDetailByID(resourceType string, resource
 }
 
 // GetInstanceDetailByID 根据实例ID获取详情（兼容性方法）
-func (r *ResourceRepository) GetInstanceDetailByID(instanceID int) (*models.ResourceDetail, error) {
-	return r.GetResourceDetailByID(models.ResourceTypeInstance, instanceID)
+func (r *ResourceRepository) GetInstanceDetailByID(instanceID int) (*dal.ResourceDetail, error) {
+	return r.GetResourceDetailByID(dal.ResourceTypeInstance, instanceID)
 }
 
 // GetClusterDetailByID 根据集群ID获取详情（兼容性方法）
-func (r *ResourceRepository) GetClusterDetailByID(clusterID int) (*models.ResourceDetail, error) {
-	return r.GetResourceDetailByID(models.ResourceTypeCluster, clusterID)
+func (r *ResourceRepository) GetClusterDetailByID(clusterID int) (*dal.ResourceDetail, error) {
+	return r.GetResourceDetailByID(dal.ResourceTypeCluster, clusterID)
 }
 
 // GetResourceList 获取资源列表（带分页）
-func (r *ResourceRepository) GetResourceList(filter *models.ResourceFilter, offset, limit int) (*models.ResourceList, error) {
+func (r *ResourceRepository) GetResourceList(filter *dal.ResourceFilter, offset, limit int) (*dal.ResourceList, error) {
 	query := GORMDB.Table("resource_details")
 
 	// 应用过滤条件
@@ -233,13 +233,13 @@ func (r *ResourceRepository) GetResourceList(filter *models.ResourceFilter, offs
 	}
 
 	// 获取分页数据
-	var details []models.ResourceDetail
+	var details []dal.ResourceDetail
 	err := query.Offset(offset).Limit(limit).Find(&details).Error
 	if err != nil {
 		return nil, err
 	}
 
-	return &models.ResourceList{
+	return &dal.ResourceList{
 		Resources: details,
 		Total:     int(total),
 	}, nil
@@ -254,51 +254,51 @@ func NewAuthConfigRepository() *AuthConfigRepository {
 }
 
 // GetByResourceID 根据资源ID和类型获取认证配置
-func (r *AuthConfigRepository) GetByResourceID(resourceType string, resourceID int) ([]models.AuthConfig, error) {
-	var configs []models.AuthConfig
-	err := GORMDB.Where("resource_type = ? AND resource_id = ? AND status = ?", resourceType, resourceID, models.AuthConfigStatusActive).Find(&configs).Error
+func (r *AuthConfigRepository) GetByResourceID(resourceType string, resourceID int) ([]dal.AuthConfig, error) {
+	var configs []dal.AuthConfig
+	err := GORMDB.Where("resource_type = ? AND resource_id = ? AND status = ?", resourceType, resourceID, dal.AuthConfigStatusActive).Find(&configs).Error
 	return configs, err
 }
 
 // GetByInstanceID 根据实例ID获取认证配置（兼容性方法）
-func (r *AuthConfigRepository) GetByInstanceID(instanceID uint) ([]models.AuthConfig, error) {
-	return r.GetByResourceID(models.ResourceTypeInstance, int(instanceID))
+func (r *AuthConfigRepository) GetByInstanceID(instanceID uint) ([]dal.AuthConfig, error) {
+	return r.GetByResourceID(dal.ResourceTypeInstance, int(instanceID))
 }
 
 // GetByClusterID 根据集群ID获取认证配置
-func (r *AuthConfigRepository) GetByClusterID(clusterID int) ([]models.AuthConfig, error) {
-	return r.GetByResourceID(models.ResourceTypeCluster, clusterID)
+func (r *AuthConfigRepository) GetByClusterID(clusterID int) ([]dal.AuthConfig, error) {
+	return r.GetByResourceID(dal.ResourceTypeCluster, clusterID)
 }
 
 // Create 创建认证配置
-func (r *AuthConfigRepository) Create(authConfig *models.AuthConfig) error {
+func (r *AuthConfigRepository) Create(authConfig *dal.AuthConfig) error {
 	return GORMDB.Create(authConfig).Error
 }
 
 // Update 更新认证配置
-func (r *AuthConfigRepository) Update(authConfig *models.AuthConfig) error {
+func (r *AuthConfigRepository) Update(authConfig *dal.AuthConfig) error {
 	return GORMDB.Save(authConfig).Error
 }
 
 // DeleteByResourceID 根据资源类型和ID删除认证配置
 func (r *AuthConfigRepository) DeleteByResourceID(resourceType string, resourceID uint) error {
-	return GORMDB.Where("resource_type = ? AND resource_id = ?", resourceType, resourceID).Delete(&models.AuthConfig{}).Error
+	return GORMDB.Where("resource_type = ? AND resource_id = ?", resourceType, resourceID).Delete(&dal.AuthConfig{}).Error
 }
 
 // DeleteByInstanceID 根据实例ID删除认证配置
 func (r *AuthConfigRepository) DeleteByInstanceID(instanceID uint) error {
-	return r.DeleteByResourceID(models.ResourceTypeInstance, instanceID)
+	return r.DeleteByResourceID(dal.ResourceTypeInstance, instanceID)
 }
 
 // DeleteByClusterID 根据集群ID删除所有认证配置
 func (r *AuthConfigRepository) DeleteByClusterID(clusterID uint) error {
-	return r.DeleteByResourceID(models.ResourceTypeCluster, clusterID)
+	return r.DeleteByResourceID(dal.ResourceTypeCluster, clusterID)
 }
 
 // GetByKey 根据资源ID、类型和配置键获取认证配置
-func (r *AuthConfigRepository) GetByKey(resourceType string, resourceID uint, configKey string) (*models.AuthConfig, error) {
-	var authConfig models.AuthConfig
-	err := GORMDB.Where("resource_type = ? AND resource_id = ? AND config_key = ? AND status = ?", resourceType, resourceID, configKey, models.AuthConfigStatusActive).First(&authConfig).Error
+func (r *AuthConfigRepository) GetByKey(resourceType string, resourceID uint, configKey string) (*dal.AuthConfig, error) {
+	var authConfig dal.AuthConfig
+	err := GORMDB.Where("resource_type = ? AND resource_id = ? AND config_key = ? AND status = ?", resourceType, resourceID, configKey, dal.AuthConfigStatusActive).First(&authConfig).Error
 	if err != nil {
 		return nil, err
 	}
@@ -306,17 +306,17 @@ func (r *AuthConfigRepository) GetByKey(resourceType string, resourceID uint, co
 }
 
 // GetClusterList 获取集群列表（兼容性方法）
-func (r *AuthConfigRepository) GetClusterList() ([]models.ClusterSimpleResult, error) {
-	var clusters []models.ClusterSimpleResult
+func (r *AuthConfigRepository) GetClusterList() ([]dal.ClusterSimpleResult, error) {
+	var clusters []dal.ClusterSimpleResult
 	err := GORMDB.Table("resource_details").
 		Select("resource_id as id, resource_name as cluster_name").
-		Where("resource_type = ? AND status = ?", models.ResourceTypeCluster, models.AuthConfigStatusActive).
+		Where("resource_type = ? AND status = ?", dal.ResourceTypeCluster, dal.AuthConfigStatusActive).
 		Find(&clusters).Error
 	return clusters, err
 }
 
 // GetResourceCount 获取资源数量统计
-func (r *ResourceRepository) GetResourceCount(filter *models.ResourceFilter) (map[string]int64, error) {
+func (r *ResourceRepository) GetResourceCount(filter *dal.ResourceFilter) (map[string]int64, error) {
 	query := GORMDB.Table("resource_details")
 
 	// 应用过滤条件
@@ -362,13 +362,13 @@ func NewConnectionTestRepository() *ConnectionTestRepository {
 }
 
 // Create 创建连接测试记录
-func (r *ConnectionTestRepository) Create(test *models.ConnectionTest) error {
+func (r *ConnectionTestRepository) Create(test *dal.ConnectionTest) error {
 	return GORMDB.Create(test).Error
 }
 
 // GetByInstanceID 根据实例ID获取连接测试记录
-func (r *ConnectionTestRepository) GetByInstanceID(instanceID uint, limit int) ([]models.ConnectionTest, error) {
-	var tests []models.ConnectionTest
+func (r *ConnectionTestRepository) GetByInstanceID(instanceID uint, limit int) ([]dal.ConnectionTest, error) {
+	var tests []dal.ConnectionTest
 	query := GORMDB.Where("resource_type = ? AND resource_id = ?", "instance", instanceID).Order("tested_at DESC")
 	if limit > 0 {
 		query = query.Limit(limit)
@@ -378,8 +378,8 @@ func (r *ConnectionTestRepository) GetByInstanceID(instanceID uint, limit int) (
 }
 
 // GetByTimeRange 根据时间范围获取连接测试记录
-func (r *ConnectionTestRepository) GetByTimeRange(startTime, endTime time.Time) ([]models.ConnectionTest, error) {
-	var tests []models.ConnectionTest
+func (r *ConnectionTestRepository) GetByTimeRange(startTime, endTime time.Time) ([]dal.ConnectionTest, error) {
+	var tests []dal.ConnectionTest
 	err := GORMDB.Where("tested_at >= ? AND tested_at < ?", startTime, endTime).
 		Order("tested_at DESC").Find(&tests).Error
 	return tests, err
@@ -391,7 +391,7 @@ func (r *ConnectionTestRepository) GetTodayStats() (map[string]interface{}, erro
 	tomorrow := today.Add(24 * time.Hour)
 
 	var totalTests int64
-	if err := GORMDB.Model(&models.ConnectionTest{}).
+	if err := GORMDB.Model(&dal.ConnectionTest{}).
 		Where("tested_at >= ? AND tested_at < ?", today, tomorrow).
 		Count(&totalTests).Error; err != nil {
 		return nil, err
@@ -423,7 +423,7 @@ func (r *ConnectionTestRepository) GetTodayStats() (map[string]interface{}, erro
 // DeleteOldRecords 删除旧的测试记录（保留最近30天）
 func (r *ConnectionTestRepository) DeleteOldRecords() error {
 	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
-	return GORMDB.Where("tested_at < ?", thirtyDaysAgo).Delete(&models.ConnectionTest{}).Error
+	return GORMDB.Where("tested_at < ?", thirtyDaysAgo).Delete(&dal.ConnectionTest{}).Error
 }
 
 // InstanceDetailRepository 实例详情GORM操作
@@ -435,26 +435,26 @@ func NewInstanceDetailRepository() *InstanceDetailRepository {
 }
 
 // GetAll 获取所有实例详情
-func (r *InstanceDetailRepository) GetAll() ([]models.ResourceDetail, error) {
-	var details []models.ResourceDetail
+func (r *InstanceDetailRepository) GetAll() ([]dal.ResourceDetail, error) {
+	var details []dal.ResourceDetail
 	err := GORMDB.Find(&details).Error
 	return details, err
 }
 
 // GetByID 根据ID获取资源详情
-func (r *InstanceDetailRepository) GetByID(id uint) (*models.ResourceDetail, error) {
-	var instance models.Instance
+func (r *InstanceDetailRepository) GetByID(id uint) (*dal.ResourceDetail, error) {
+	var instance dal.Instance
 	err := GORMDB.Where("id = ?", id).First(&instance).Error
 	if err != nil {
 		return nil, err
 	}
 
 	// 手动查询实例类型
-	var instanceType models.InstanceType
+	var instanceType dal.InstanceType
 	GORMDB.First(&instanceType, instance.InstanceTypeID)
 
 	// 转换为ResourceDetail格式
-	detail := &models.ResourceDetail{
+	detail := &dal.ResourceDetail{
 		ResourceType:    "instance",
 		TypeName:        instanceType.TypeName,
 		TypeDescription: instanceType.Description,
@@ -471,7 +471,7 @@ func (r *InstanceDetailRepository) GetByID(id uint) (*models.ResourceDetail, err
 	}
 
 	// 构建认证配置JSON - 手动查询认证配置
-	var authConfigs []models.AuthConfig
+	var authConfigs []dal.AuthConfig
 	if err := GORMDB.Where("resource_type = ? AND resource_id = ?", "instance", instance.ID).Find(&authConfigs).Error; err == nil && len(authConfigs) > 0 {
 		authConfigMaps := make([]map[string]interface{}, 0)
 		for _, authConfig := range authConfigs {
@@ -514,8 +514,8 @@ func (r *InstanceDetailRepository) GetByID(id uint) (*models.ResourceDetail, err
 }
 
 // GetByTypeName 根据类型名称获取实例详情
-func (r *InstanceDetailRepository) GetByTypeName(typeName string) ([]models.ResourceDetail, error) {
-	var details []models.ResourceDetail
+func (r *InstanceDetailRepository) GetByTypeName(typeName string) ([]dal.ResourceDetail, error) {
+	var details []dal.ResourceDetail
 	err := GORMDB.Where("type_name = ?", typeName).Find(&details).Error
 	return details, err
 }
@@ -529,15 +529,15 @@ func NewAccountRepository() *AccountRepository {
 }
 
 // GetAll 获取所有用户账号
-func (r *AccountRepository) GetAll() ([]models.Account, error) {
-	var accounts []models.Account
+func (r *AccountRepository) GetAll() ([]dal.Account, error) {
+	var accounts []dal.Account
 	err := GORMDB.Find(&accounts).Error
 	return accounts, err
 }
 
 // GetByID 根据ID获取账户
-func (r *AccountRepository) GetByID(id uint) (*models.Account, error) {
-	var account models.Account
+func (r *AccountRepository) GetByID(id uint) (*dal.Account, error) {
+	var account dal.Account
 	err := GORMDB.Where("id = ?", id).First(&account).Error
 	if err != nil {
 		return nil, err
@@ -546,8 +546,8 @@ func (r *AccountRepository) GetByID(id uint) (*models.Account, error) {
 }
 
 // GetByUserID 根据用户ID获取用户账号
-func (r *AccountRepository) GetByUserID(userID string) (*models.Account, error) {
-	var account models.Account
+func (r *AccountRepository) GetByUserID(userID string) (*dal.Account, error) {
+	var account dal.Account
 	err := GORMDB.Where("user_id = ?", userID).First(&account).Error
 	if err != nil {
 		return nil, err
@@ -556,16 +556,16 @@ func (r *AccountRepository) GetByUserID(userID string) (*models.Account, error) 
 }
 
 // Create 创建用户账号
-func (r *AccountRepository) Create(account *models.Account) error {
+func (r *AccountRepository) Create(account *dal.Account) error {
 	return GORMDB.Create(account).Error
 }
 
 // Update 更新用户账号
-func (r *AccountRepository) Update(account *models.Account) error {
+func (r *AccountRepository) Update(account *dal.Account) error {
 	return GORMDB.Save(account).Error
 }
 
 // Delete 根据ID删除账户
 func (r *AccountRepository) Delete(id uint) error {
-	return GORMDB.Delete(&models.Account{}, id).Error
+	return GORMDB.Delete(&dal.Account{}, id).Error
 }
