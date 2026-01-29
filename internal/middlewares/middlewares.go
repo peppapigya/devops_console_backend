@@ -5,6 +5,7 @@ import (
 	"devops-console-backend/internal/common"
 	"devops-console-backend/internal/dal/redis"
 	"devops-console-backend/pkg/database"
+	"devops-console-backend/pkg/utils"
 	"devops-console-backend/pkg/utils/jwt"
 	"fmt"
 	"log"
@@ -46,7 +47,7 @@ func Authenticate(excludePaths ...string) gin.HandlerFunc {
 			return
 		}
 		// 如果redis中有数据，执行用户下线操作
-		//redisOperator(claims, c, token)
+		redisOperator(claims, c, token)
 		// 将解析的用户信息设置到上下文中
 		c.Set(common.UserInfoKey, claims)
 		c.Next()
@@ -60,12 +61,13 @@ func redisOperator(claim *jwt.Claims, c *gin.Context, token string) {
 		panic("redis 客户端未初始化")
 		return
 	}
-	key := fmt.Sprintf("%v:%v", common.LoginAccessPrefix, claim.GetUserId())
+	key := fmt.Sprintf("%v:%v:%v", common.BlockedTokenPrefix, claim.GetUserId(), token)
 	redisClient := redis.NewClient(client)
+	helper := utils.NewResponseHelper(c)
 	value := redisClient.Get(key, false)
-	if value != token {
+	if value != "" {
 		_ = redisClient.Delete(key)
-		c.AbortWithStatusJSON(401, gin.H{"msg": "账号已在其他地方登录"})
+		helper.Error(401, "账号已在其他地方登录")
 		c.Abort()
 		return
 	}

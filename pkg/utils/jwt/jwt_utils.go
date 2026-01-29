@@ -95,7 +95,7 @@ func GenerateRefreshToken(ID int64) (string, error) {
 
 // RefreshToken 刷新token
 func (claims *Claims) RefreshToken() (string, error) {
-	// 判断刷新Token是否过期
+	// 判断刷新 Token 是否过期
 	if time.Now().After(claims.ExpiresAt.Time) {
 		return "", jwt.ErrTokenNotValidYet
 	}

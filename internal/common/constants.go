@@ -9,4 +9,5 @@ var (
 var (
 	LoginAccessPrefix  = "login:access:"
 	LoginRefreshPrefix = "login:refresh:"
+	BlockedTokenPrefix = "blacklist:token:"
 )

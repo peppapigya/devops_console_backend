@@ -17,14 +17,16 @@ import (
 )
 
 type LoginController struct {
-	userMapper *mapper.UserMapper
-	redisCli   *redis.RedisClient
+	userMapper       *mapper.UserMapper
+	redisCli         *redis.RedisClient
+	blackListManager *jwt.BlackListManager
 }
 
-func NewLoginController(userMapper *mapper.UserMapper, redisCli *redis.RedisClient) *LoginController {
+func NewLoginController(userMapper *mapper.UserMapper, redisCli *redis.RedisClient, blackListManager *jwt.BlackListManager) *LoginController {
 	return &LoginController{
-		userMapper: userMapper,
-		redisCli:   redisCli,
+		userMapper:       userMapper,
+		redisCli:         redisCli,
+		blackListManager: blackListManager,
 	}
 }
 
@@ -42,6 +44,8 @@ func (l *LoginController) Login(c *gin.Context) {
 		helper.Fail(common.UserPasswordError)
 		return
 	}
+	// 将已登录的用户踢下线
+	_ = l.KickOffline(c, user.ID)
 	// 2. 生成 token 信息
 	accessToken, refreshToken, err := getAccessTokenAndRefreshToken(c, user)
 	if err != nil {
@@ -56,10 +60,13 @@ func (l *LoginController) Login(c *gin.Context) {
 		Username:     user.Username,
 	}
 	// 4. 将token信息设置到redis中
-	_ = l.redisCli.SetWithExpiration(c, fmt.Sprintf("%v:%v", common.LoginAccessPrefix, user.ID),
-		accessToken, time.Duration(common.GetGlobalConfig().Jwt.ExpireTime))
-	_ = l.redisCli.SetWithExpiration(c, fmt.Sprintf("%v:%v", common.LoginAccessPrefix, user.ID),
-		refreshToken, time.Duration(common.GetGlobalConfig().Jwt.RefreshExpireTime))
+	err = l.redisCli.SetWithExpiration(c, fmt.Sprintf("%v:%v", common.LoginAccessPrefix, user.ID),
+		accessToken, time.Duration(common.GetGlobalConfig().Jwt.ExpireTime)*time.Second)
+	err = l.redisCli.SetWithExpiration(c, fmt.Sprintf("%v:%v", common.LoginRefreshPrefix, user.ID),
+		refreshToken, time.Duration(common.GetGlobalConfig().Jwt.RefreshExpireTime)*time.Second)
+	if err != nil {
+		helper.InternalError(err.Error())
+	}
 
 	// 5. 将token存储到数据库中
 	err = l.InsertUserToken(user, accessToken, refreshToken)
@@ -69,6 +76,20 @@ func (l *LoginController) Login(c *gin.Context) {
 		return
 	}
 	helper.SuccessWithData("登录成功", "data", loginResponse)
+}
+
+// KickOffline 将已登录的用户踢下线
+func (l *LoginController) KickOffline(c *gin.Context, userID uint32) error {
+	oldToken := l.redisCli.Get(fmt.Sprintf("%v:%v", common.LoginAccessPrefix, userID), false)
+	if oldToken != "" {
+		key := fmt.Sprintf("%v:%v:%v", common.BlockedTokenPrefix, userID, oldToken)
+		err := l.blackListManager.Add(c, key, time.Duration(common.GetGlobalConfig().Jwt.ExpireTime)*time.Second)
+		if err != nil {
+			log.Printf("加入黑名单失败：%v", err.Error())
+			return err
+		}
+	}
+	return nil
 }
 
 // InsertUserToken 插入用户token
