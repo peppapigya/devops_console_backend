@@ -2,6 +2,7 @@
 package routers
 
 import (
+	"devops-console-backend/internal/routes/cicd"
 	"devops-console-backend/internal/routes/es/backup"
 	"devops-console-backend/internal/routes/es/elasticsearch"
 	"devops-console-backend/internal/routes/es/indices"
@@ -29,5 +30,8 @@ func RegisterRouters(r *gin.Engine, db *gorm.DB) {
 		// 注册K8s模块路由
 		k8s.RegisterK8sRoutes(apiGroup, db)
 		system.RegisterSystemRouters(apiGroup)
+
+		// CiCd 模块
+		cicd.RegisterCiCdRouters(apiGroup)
 	}
 }

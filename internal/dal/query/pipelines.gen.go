@@ -30,6 +30,7 @@ func newPipeline(db *gorm.DB, opts ...gen.DOOption) pipeline {
 	_pipeline.ALL = field.NewAsterisk(tableName)
 	_pipeline.ID = field.NewUint32(tableName, "id")
 	_pipeline.ProjectID = field.NewUint32(tableName, "project_id")
+	_pipeline.K8sInstanceID = field.NewUint32(tableName, "k8s_instance_id")
 	_pipeline.Name = field.NewString(tableName, "name")
 	_pipeline.GitURL = field.NewString(tableName, "git_url")
 	_pipeline.Branch = field.NewString(tableName, "branch")
@@ -37,6 +38,7 @@ func newPipeline(db *gorm.DB, opts ...gen.DOOption) pipeline {
 	_pipeline.ParamsConfig = field.NewString(tableName, "params_config")
 	_pipeline.CreatedAt = field.NewTime(tableName, "created_at")
 	_pipeline.UpdatedAt = field.NewTime(tableName, "updated_at")
+	_pipeline.DeletedAt = field.NewField(tableName, "deleted_at")
 
 	_pipeline.fillFieldMap()
 
@@ -47,16 +49,18 @@ func newPipeline(db *gorm.DB, opts ...gen.DOOption) pipeline {
 type pipeline struct {
 	pipelineDo
 
-	ALL          field.Asterisk
-	ID           field.Uint32
-	ProjectID    field.Uint32 // 关联项目ID
-	Name         field.String // 流水线名称
-	GitURL       field.String // 代码仓库地址
-	Branch       field.String // 默认构建分支
-	ArgoTemplate field.String // 关联的 Argo WorkflowTemplate 名称
-	ParamsConfig field.String // 自定义参数配置(环境变量、构建参数等)
-	CreatedAt    field.Time
-	UpdatedAt    field.Time
+	ALL           field.Asterisk
+	ID            field.Uint32
+	ProjectID     field.Uint32 // 关联项目ID
+	K8sInstanceID field.Uint32 // 目标K8s集群实例ID
+	Name          field.String // 流水线名称
+	GitURL        field.String // 代码仓库地址
+	Branch        field.String // 默认构建分支
+	ArgoTemplate  field.String // 关联的 Argo WorkflowTemplate 名称
+	ParamsConfig  field.String // 自定义参数配置(环境变量、构建参数等)
+	CreatedAt     field.Time
+	UpdatedAt     field.Time
+	DeletedAt     field.Field
 
 	fieldMap map[string]field.Expr
 }
@@ -75,6 +79,7 @@ func (p *pipeline) updateTableName(table string) *pipeline {
 	p.ALL = field.NewAsterisk(table)
 	p.ID = field.NewUint32(table, "id")
 	p.ProjectID = field.NewUint32(table, "project_id")
+	p.K8sInstanceID = field.NewUint32(table, "k8s_instance_id")
 	p.Name = field.NewString(table, "name")
 	p.GitURL = field.NewString(table, "git_url")
 	p.Branch = field.NewString(table, "branch")
@@ -82,6 +87,7 @@ func (p *pipeline) updateTableName(table string) *pipeline {
 	p.ParamsConfig = field.NewString(table, "params_config")
 	p.CreatedAt = field.NewTime(table, "created_at")
 	p.UpdatedAt = field.NewTime(table, "updated_at")
+	p.DeletedAt = field.NewField(table, "deleted_at")
 
 	p.fillFieldMap()
 
@@ -98,9 +104,10 @@ func (p *pipeline) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (p *pipeline) fillFieldMap() {
-	p.fieldMap = make(map[string]field.Expr, 9)
+	p.fieldMap = make(map[string]field.Expr, 11)
 	p.fieldMap["id"] = p.ID
 	p.fieldMap["project_id"] = p.ProjectID
+	p.fieldMap["k8s_instance_id"] = p.K8sInstanceID
 	p.fieldMap["name"] = p.Name
 	p.fieldMap["git_url"] = p.GitURL
 	p.fieldMap["branch"] = p.Branch
@@ -108,6 +115,7 @@ func (p *pipeline) fillFieldMap() {
 	p.fieldMap["params_config"] = p.ParamsConfig
 	p.fieldMap["created_at"] = p.CreatedAt
 	p.fieldMap["updated_at"] = p.UpdatedAt
+	p.fieldMap["deleted_at"] = p.DeletedAt
 }
 
 func (p pipeline) clone(db *gorm.DB) pipeline {

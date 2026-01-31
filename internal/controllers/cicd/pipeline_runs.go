@@ -11,63 +11,66 @@ import (
 
 type PipelineRunController struct {
 	mapper *mapper.PipelineRunMapper
-	helper *utils.ResponseHelper
 }
 
-func NewPipelineRunController(mapper *mapper.PipelineRunMapper, helper *utils.ResponseHelper) *PipelineRunController {
+func NewPipelineRunController(mapper *mapper.PipelineRunMapper) *PipelineRunController {
 	return &PipelineRunController{
 		mapper: mapper,
-		helper: helper,
 	}
 }
 
 func (c *PipelineRunController) GetPipelineRunById(ctx *gin.Context) {
 	var id uint64
+	helper := utils.NewResponseHelper(ctx)
 	utils.GetParam(ctx, "id", &id, nil)
 	pipelineRun, err := c.mapper.GetPipelineRunById(id)
 	if err != nil {
-		c.helper.DatabaseError(err.Error())
+		helper.DatabaseError(err.Error())
 	}
-	c.helper.SuccessWithData("success", "pipelineRun", pipelineRun)
+	helper.SuccessWithData("success", "pipelineRun", pipelineRun)
 }
 
 func (c *PipelineRunController) UpdatePipelineRun(ctx *gin.Context) {
 	var pipelineRun model.PipelineRun
+	helper := utils.NewResponseHelper(ctx)
 	if !utils.BindAndValidate(ctx, &pipelineRun) {
 		return
 	}
 	err := c.mapper.UpdatePipelineRun(&pipelineRun)
 	if err != nil {
-		c.helper.DatabaseError(err.Error())
+		helper.DatabaseError(err.Error())
 	}
-	c.helper.Success("success")
+	helper.Success("success")
 }
 
 func (c *PipelineRunController) CreatePipelineRun(ctx *gin.Context) {
 	var pipelineRun model.PipelineRun
+	helper := utils.NewResponseHelper(ctx)
 	if !utils.BindAndValidate(ctx, &pipelineRun) {
 		return
 	}
 	err := c.mapper.CreatePipelineRun(&pipelineRun)
 	if err != nil {
-		c.helper.DatabaseError(err.Error())
+		helper.DatabaseError(err.Error())
 	}
-	c.helper.SuccessWithData("success", "data", pipelineRun)
+	helper.SuccessWithData("success", "data", pipelineRun)
 }
 
 func (c *PipelineRunController) DeletePipelineRun(ctx *gin.Context) {
 	var id uint64
+	helper := utils.NewResponseHelper(ctx)
 	utils.GetParam(ctx, "id", &id, nil)
 	err := c.mapper.DeletePipelineRun(id)
 	if err != nil {
-		c.helper.DatabaseError(err.Error())
+		helper.DatabaseError(err.Error())
 	}
-	c.helper.Success("success")
+	helper.Success("success")
 }
 
 func (c *PipelineRunController) GetPagePipelineRuns(ctx *gin.Context) {
 	var pageNum int
 	var pageSize int
+	helper := utils.NewResponseHelper(ctx)
 	utils.GetParam(ctx, "pageNum", &pageNum, nil)
 	utils.GetParam(ctx, "pageSize", &pageSize, nil)
 	pipelineRuns, total, err := c.mapper.GetPagePipelineRuns(pageNum, pageSize)
@@ -78,7 +81,7 @@ func (c *PipelineRunController) GetPagePipelineRuns(ctx *gin.Context) {
 		Total:    total,
 	}
 	if err != nil {
-		c.helper.DatabaseError(err.Error())
+		helper.DatabaseError(err.Error())
 	}
-	c.helper.SuccessWithData("success", "data", response)
+	helper.SuccessWithData("success", "data", response)
 }

@@ -40,6 +40,7 @@ func newPipelineRun(db *gorm.DB, opts ...gen.DOOption) pipelineRun {
 	_pipelineRun.Duration = field.NewUint32(tableName, "duration")
 	_pipelineRun.CreatedAt = field.NewTime(tableName, "created_at")
 	_pipelineRun.UpdatedAt = field.NewTime(tableName, "updated_at")
+	_pipelineRun.DeletedAt = field.NewField(tableName, "deleted_at")
 
 	_pipelineRun.fillFieldMap()
 
@@ -63,6 +64,7 @@ type pipelineRun struct {
 	Duration     field.Uint32 // 执行耗时，单位秒
 	CreatedAt    field.Time
 	UpdatedAt    field.Time
+	DeletedAt    field.Field
 
 	fieldMap map[string]field.Expr
 }
@@ -91,6 +93,7 @@ func (p *pipelineRun) updateTableName(table string) *pipelineRun {
 	p.Duration = field.NewUint32(table, "duration")
 	p.CreatedAt = field.NewTime(table, "created_at")
 	p.UpdatedAt = field.NewTime(table, "updated_at")
+	p.DeletedAt = field.NewField(table, "deleted_at")
 
 	p.fillFieldMap()
 
@@ -107,7 +110,7 @@ func (p *pipelineRun) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (p *pipelineRun) fillFieldMap() {
-	p.fieldMap = make(map[string]field.Expr, 12)
+	p.fieldMap = make(map[string]field.Expr, 13)
 	p.fieldMap["id"] = p.ID
 	p.fieldMap["pipeline_id"] = p.PipelineID
 	p.fieldMap["workflow_name"] = p.WorkflowName
@@ -120,6 +123,7 @@ func (p *pipelineRun) fillFieldMap() {
 	p.fieldMap["duration"] = p.Duration
 	p.fieldMap["created_at"] = p.CreatedAt
 	p.fieldMap["updated_at"] = p.UpdatedAt
+	p.fieldMap["deleted_at"] = p.DeletedAt
 }
 
 func (p pipelineRun) clone(db *gorm.DB) pipelineRun {

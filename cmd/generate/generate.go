@@ -70,8 +70,6 @@ func main() {
 
 }
 
-// 为User模型生成自定义查询方法
-
 type Querier interface {
 	// SELECT * FROM @@table WHERE name = @name AND age = @age
 	FindByNameAndAge(name string, age int) ([]gen.T, error)

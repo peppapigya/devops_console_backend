@@ -23,6 +23,7 @@ var (
 	InstanceType    *instanceType
 	Pipeline        *pipeline
 	PipelineRun     *pipelineRun
+	PipelineStep    *pipelineStep
 	Project         *project
 	ResourceDetail  *resourceDetail
 	SystemUser      *systemUser
@@ -37,6 +38,7 @@ func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	InstanceType = &Q.InstanceType
 	Pipeline = &Q.Pipeline
 	PipelineRun = &Q.PipelineRun
+	PipelineStep = &Q.PipelineStep
 	Project = &Q.Project
 	ResourceDetail = &Q.ResourceDetail
 	SystemUser = &Q.SystemUser
@@ -52,6 +54,7 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		InstanceType:    newInstanceType(db, opts...),
 		Pipeline:        newPipeline(db, opts...),
 		PipelineRun:     newPipelineRun(db, opts...),
+		PipelineStep:    newPipelineStep(db, opts...),
 		Project:         newProject(db, opts...),
 		ResourceDetail:  newResourceDetail(db, opts...),
 		SystemUser:      newSystemUser(db, opts...),
@@ -68,6 +71,7 @@ type Query struct {
 	InstanceType    instanceType
 	Pipeline        pipeline
 	PipelineRun     pipelineRun
+	PipelineStep    pipelineStep
 	Project         project
 	ResourceDetail  resourceDetail
 	SystemUser      systemUser
@@ -85,6 +89,7 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		InstanceType:    q.InstanceType.clone(db),
 		Pipeline:        q.Pipeline.clone(db),
 		PipelineRun:     q.PipelineRun.clone(db),
+		PipelineStep:    q.PipelineStep.clone(db),
 		Project:         q.Project.clone(db),
 		ResourceDetail:  q.ResourceDetail.clone(db),
 		SystemUser:      q.SystemUser.clone(db),
@@ -109,6 +114,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		InstanceType:    q.InstanceType.replaceDB(db),
 		Pipeline:        q.Pipeline.replaceDB(db),
 		PipelineRun:     q.PipelineRun.replaceDB(db),
+		PipelineStep:    q.PipelineStep.replaceDB(db),
 		Project:         q.Project.replaceDB(db),
 		ResourceDetail:  q.ResourceDetail.replaceDB(db),
 		SystemUser:      q.SystemUser.replaceDB(db),
@@ -123,6 +129,7 @@ type queryCtx struct {
 	InstanceType    IInstanceTypeDo
 	Pipeline        IPipelineDo
 	PipelineRun     IPipelineRunDo
+	PipelineStep    IPipelineStepDo
 	Project         IProjectDo
 	ResourceDetail  IResourceDetailDo
 	SystemUser      ISystemUserDo
@@ -137,6 +144,7 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		InstanceType:    q.InstanceType.WithContext(ctx),
 		Pipeline:        q.Pipeline.WithContext(ctx),
 		PipelineRun:     q.PipelineRun.WithContext(ctx),
+		PipelineStep:    q.PipelineStep.WithContext(ctx),
 		Project:         q.Project.WithContext(ctx),
 		ResourceDetail:  q.ResourceDetail.WithContext(ctx),
 		SystemUser:      q.SystemUser.WithContext(ctx),

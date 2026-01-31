@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	metricsv "k8s.io/metrics/pkg/client/clientset/versioned"
 )
@@ -16,6 +17,8 @@ import (
 var (
 	k8sClients     map[uint]*kubernetes.Clientset
 	k8sClientsLock sync.RWMutex
+	configMap      map[uint]*rest.Config
+	k8sConfigLock  sync.RWMutex
 )
 
 // InitK8sClients 初始化所有K8s类型的客户端
@@ -24,6 +27,7 @@ func InitK8sClients() error {
 	defer k8sClientsLock.Unlock()
 
 	k8sClients = make(map[uint]*kubernetes.Clientset)
+	configMap = make(map[uint]*rest.Config)
 
 	// 查询所有kubernetes类型的实例
 	instanceRepo := NewInstanceRepository()
@@ -109,7 +113,7 @@ func InitK8sClients() error {
 			}, "构建k8s配置失败")
 			continue
 		}
-
+		configMap[instance.ID] = restConfig
 		clientSet, err := kubernetes.NewForConfig(restConfig)
 		if err != nil {
 			logs.Error(map[string]interface{}{
@@ -118,7 +122,6 @@ func InitK8sClients() error {
 			}, "创建k8s客户端失败")
 			continue
 		}
-
 		k8sClients[instance.ID] = clientSet
 		logs.Info(map[string]interface{}{
 			"instance_id":   instance.ID,
@@ -140,6 +143,13 @@ func GetK8sClient(instanceID uint) (*kubernetes.Clientset, bool) {
 
 	client, exists := k8sClients[instanceID]
 	return client, exists
+}
+
+func GetK8sConfig(instanceID uint) (*rest.Config, bool) {
+	k8sConfigLock.RLock()
+	defer k8sConfigLock.RUnlock()
+	config, exists := configMap[instanceID]
+	return config, exists
 }
 
 // AddK8sClient 添加新的K8s客户端

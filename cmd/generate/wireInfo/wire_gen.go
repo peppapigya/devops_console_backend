@@ -7,6 +7,7 @@
 package wireInfo
 
 import (
+	"devops-console-backend/internal/controllers/cicd"
 	"devops-console-backend/internal/controllers/system"
 	"devops-console-backend/internal/dal/mapper"
 	"devops-console-backend/internal/dal/redis"
@@ -25,4 +26,41 @@ func InitializeLoginController() *system.LoginController {
 	blackListManager := jwt.NewBlackListManager(redisClient)
 	loginController := system.NewLoginController(userMapper, redisClient, blackListManager)
 	return loginController
+}
+
+func InitializePipelineController() *cicd.PipelinesController {
+	db := configs.NewDB()
+	pipelinesMapper := mapper.NewPipelinesMapper(db)
+	pipelinesController := cicd.NewPipelinesController(pipelinesMapper)
+	return pipelinesController
+}
+
+func InitializePipelineRunsController() *cicd.PipelineRunController {
+	db := configs.NewDB()
+	pipelineRunMapper := mapper.NewPipelineRunMapper(db)
+	pipelineRunController := cicd.NewPipelineRunController(pipelineRunMapper)
+	return pipelineRunController
+}
+
+func InitializeProjectsController() *cicd.ProjectsController {
+	db := configs.NewDB()
+	projectMapper := mapper.NewProjectMapper(db)
+	projectsController := cicd.NewProjectsController(projectMapper)
+	return projectsController
+}
+
+func InitializeArgoController() *cicd.ArgoController {
+	db := configs.NewDB()
+	pipelineRunMapper := mapper.NewPipelineRunMapper(db)
+	pipelinesMapper := mapper.NewPipelinesMapper(db)
+	pipelineStepsMapper := mapper.NewPipelineStepsMapper(db)
+	argoController := cicd.NewArgoController(pipelineRunMapper, pipelinesMapper, pipelineStepsMapper)
+	return argoController
+}
+
+func InitializePipelineStepsController() *cicd.PipelineStepsController {
+	db := configs.NewDB()
+	pipelineStepsMapper := mapper.NewPipelineStepsMapper(db)
+	pipelineStepsController := cicd.NewPipelineStepsController(pipelineStepsMapper)
+	return pipelineStepsController
 }

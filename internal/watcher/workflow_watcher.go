@@ -25,7 +25,6 @@ func (w *WorkflowWatcher) Run(stopCh <-chan struct{}) {
 	factory := externalversions.NewSharedInformerFactory(w.argoClient, 0)
 	informer := factory.Argoproj().V1alpha1().Workflows().Informer()
 
-	// 修正后的类型：cache.ResourceEventHandlerFuncs
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// 当 Workflow 更新时触发（包括状态变更）
 		UpdateFunc: func(oldObj, newObj interface{}) {
