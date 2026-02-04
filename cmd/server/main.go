@@ -22,16 +22,19 @@ package main
 import (
 	_ "devops-console-backend/docs" // swagger docs
 	"devops-console-backend/internal/common"
+	"devops-console-backend/internal/controllers/monitor"
 	"devops-console-backend/internal/middlewares"
 	"devops-console-backend/internal/routes"
 	"devops-console-backend/internal/websocket"
 	"devops-console-backend/pkg/configs"
 	"devops-console-backend/pkg/database"
 	"devops-console-backend/pkg/utils/logs"
+	"net/http"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
@@ -60,7 +63,8 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
-
+	// 初始化 prometheus monitor
+	monitor.InitPrometheus()
 	configs.InitConfig()
 	// 3. 日志配置
 	logs.Info(nil, "程序启动成功")
@@ -81,6 +85,10 @@ func main() {
 	// 注册WebSocket路由
 	websocket.RegisterWebSocketRoutes(r)
 
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		_ = http.ListenAndServe(":9090", nil)
+	}()
 	err = r.Run(configs.Port)
 	if err != nil {
 		return
@@ -91,4 +99,6 @@ func main() {
 func setMiddleware(router *gin.Engine, globalConfig *common.GlobalConfig) {
 	// 认证
 	router.Use(middlewares.Authenticate(globalConfig.Jwt.ExcludePaths...))
+	router.Use(middlewares.Metrics())
+	router.Use(middlewares.IPRateLimit())
 }

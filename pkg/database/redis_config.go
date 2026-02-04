@@ -7,6 +7,15 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+var IPLimitScript = redis.NewScript(`
+local current = redis.call("HINCRBY", KEYS[1], ARGV[1], 1)
+redis.call("EXPIRE", KEYS[1], ARGV[3])
+if tonumber(current) > tonumber(ARGV[2]) then
+    return 0
+end
+return 1
+`)
+
 var redisClient *redis.Client
 
 func InitRedis() *redis.Client {

@@ -2,7 +2,9 @@
 package middlewares
 
 import (
+	"context"
 	"devops-console-backend/internal/common"
+	"devops-console-backend/internal/controllers/monitor"
 	"devops-console-backend/internal/dal/redis"
 	"devops-console-backend/pkg/database"
 	"devops-console-backend/pkg/utils"
@@ -12,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -51,6 +54,48 @@ func Authenticate(excludePaths ...string) gin.HandlerFunc {
 		// 将解析的用户信息设置到上下文中
 		c.Set(common.UserInfoKey, claims)
 		c.Next()
+	}
+}
+
+// Metrics 相关中间件
+func Metrics() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+
+		monitor.HttpRequestsTotal.WithLabelValues(
+			c.Request.Method,
+			c.FullPath(),
+			strconv.Itoa(c.Writer.Status()),
+		).Inc()
+
+		monitor.HttpDuration.WithLabelValues(
+			c.FullPath(),
+		).Observe(time.Since(start).Seconds())
+	}
+}
+
+// IPRateLimit IP限流中间件
+func IPRateLimit() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ip := utils.GetClientIP(c.Request)
+		key := fmt.Sprintf("api:ip:req:%s", time.Now().Format("202602021504"))
+
+		res, err := database.IPLimitScript.Run(
+			context.Background(),
+			database.GetRedisClient(),
+			[]string{key},
+			ip,
+			100,
+			120,
+		).Int()
+
+		if err != nil || res == 1 {
+			c.Next()
+			return
+		}
+
+		c.AbortWithStatusJSON(429, gin.H{"message": "请求次数过多"})
 	}
 }
 
