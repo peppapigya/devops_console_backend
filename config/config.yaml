@@ -19,7 +19,7 @@ database:
 #    password: "devops123456"  # Docker环境中的密码
 #    database: "devops_console"
     host: "47.104.247.159"  # Docker容器中的服务名
-    port: 3306
+    port: 8002
     username: "root"  # Docker环境中的用户
     password: "peppa-pig"  # Docker环境中的密码
     database: "devops_console"
@@ -63,3 +63,20 @@ health:
   enabled: true
   endpoint: "/health"
   interval: 30  # 检查间隔（秒）
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password: "123456"
+  db: 0
+
+jwt:
+  secret: "n02y2Zqf4eL0hZ4xjQH9w1zDk1w5FqMnc9R+N8T1v2E="
+  expire-time: 3600 # 单位为秒
+  refresh-expire-time: 604800
+  exclude-paths:
+    - /api/v1/system/login
+    - /api/v1/sysUser/refresh
+    - /api/v1/sysUser/captcha
+    - /swagger/*
+    - /jobs/script/
