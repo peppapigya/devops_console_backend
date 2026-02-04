@@ -80,3 +80,4 @@ jwt:
     - /api/v1/sysUser/captcha
     - /swagger/*
     - /jobs/script/
+    - /metrics
