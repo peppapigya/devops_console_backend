@@ -10,6 +10,7 @@ import (
 	"devops-console-backend/internal/routes/k8s/node"
 	"devops-console-backend/internal/routes/k8s/pod"
 	"devops-console-backend/internal/routes/k8s/service"
+	"devops-console-backend/internal/routes/k8s/storage"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -51,4 +52,8 @@ func RegisterK8sRoutes(apiGroup *gin.RouterGroup, db *gorm.DB) {
 	// 注册Service路由
 	serviceRoute := service.NewServiceRoute()
 	serviceRoute.RegisterSubRouter(apiGroup)
+
+	// 注册Storage路由
+	storageRoute := storage.NewStorageRoute()
+	storageRoute.RegisterSubRouter(apiGroup)
 }
