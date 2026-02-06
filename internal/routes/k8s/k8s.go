@@ -7,6 +7,7 @@ import (
 	"devops-console-backend/internal/routes/k8s/deployment"
 	"devops-console-backend/internal/routes/k8s/job"
 	"devops-console-backend/internal/routes/k8s/namespace"
+	"devops-console-backend/internal/routes/k8s/network"
 	"devops-console-backend/internal/routes/k8s/node"
 	"devops-console-backend/internal/routes/k8s/pod"
 	"devops-console-backend/internal/routes/k8s/service"
@@ -56,4 +57,8 @@ func RegisterK8sRoutes(apiGroup *gin.RouterGroup, db *gorm.DB) {
 	// 注册Storage路由
 	storageRoute := storage.NewStorageRoute()
 	storageRoute.RegisterSubRouter(apiGroup)
+
+	// 注册Network路由
+	networkRoute := network.NewNetworkRoute()
+	networkRoute.RegisterSubRouter(apiGroup)
 }
