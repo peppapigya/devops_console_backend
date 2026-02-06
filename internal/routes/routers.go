@@ -9,6 +9,7 @@ import (
 	"devops-console-backend/internal/routes/es/instance"
 	"devops-console-backend/internal/routes/es/node"
 	"devops-console-backend/internal/routes/es/shard"
+	"devops-console-backend/internal/routes/helm"
 	"devops-console-backend/internal/routes/k8s"
 	"devops-console-backend/internal/routes/system"
 
@@ -29,6 +30,9 @@ func RegisterRouters(r *gin.Engine, db *gorm.DB) {
 		indices.RegisterSubRouter(apiGroup)
 		// 注册K8s模块路由
 		k8s.RegisterK8sRoutes(apiGroup, db)
+		// 注册Helm模块路由
+		helmRoute := helm.NewHelmRoute(db)
+		helmRoute.RegisterSubRouter(apiGroup)
 		system.RegisterSystemRouters(apiGroup)
 
 		// CiCd 模块

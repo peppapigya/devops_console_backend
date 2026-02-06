@@ -66,3 +66,57 @@ type ConnectionTest struct {
 func (ConnectionTest) TableName() string {
 	return "connection_tests"
 }
+
+// HelmRepo Helm仓库模型
+type HelmRepo struct {
+	ID        uint      `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
+	Name      string    `gorm:"uniqueIndex;not null;column:name;size:255" json:"name"`
+	URL       string    `gorm:"not null;column:url;size:500" json:"url"`
+	Username  string    `gorm:"column:username;size:255" json:"username"`
+	Password  string    `gorm:"column:password;size:500" json:"password"` // 加密存储
+	CreatedAt time.Time `gorm:"column:created_at" json:"created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at" json:"updated_at"`
+}
+
+// TableName 指定表名
+func (HelmRepo) TableName() string {
+	return "helm_repo"
+}
+
+// HelmChart Helm应用缓存模型
+type HelmChart struct {
+	ID          uint      `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
+	RepoID      uint      `gorm:"index;not null;column:repo_id" json:"repo_id"`
+	Name        string    `gorm:"index;not null;column:name;size:255" json:"name"`
+	Version     string    `gorm:"not null;column:version;size:100" json:"version"`
+	AppVersion  string    `gorm:"column:app_version;size:100" json:"app_version"`
+	Description string    `gorm:"type:text;column:description" json:"description"`
+	Icon        string    `gorm:"column:icon;size:500" json:"icon"`
+	ChartURL    string    `gorm:"column:chart_url;size:500" json:"chart_url"`
+	CreatedAt   time.Time `gorm:"column:created_at" json:"created_at"`
+	UpdatedAt   time.Time `gorm:"column:updated_at" json:"updated_at"`
+}
+
+// TableName 指定表名
+func (HelmChart) TableName() string {
+	return "helm_chart"
+}
+
+// HelmRelease Helm已安装应用实例模型
+type HelmRelease struct {
+	ID           uint      `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
+	InstanceID   uint      `gorm:"index;not null;column:instance_id" json:"instance_id"`
+	Namespace    string    `gorm:"index;not null;column:namespace;size:255" json:"namespace"`
+	ReleaseName  string    `gorm:"not null;column:release_name;size:255" json:"release_name"`
+	ChartName    string    `gorm:"column:chart_name;size:255" json:"chart_name"`
+	ChartVersion string    `gorm:"column:chart_version;size:100" json:"chart_version"`
+	Status       string    `gorm:"column:status;size:50" json:"status"`
+	Values       string    `gorm:"type:text;column:values" json:"values"` // JSON格式
+	CreatedAt    time.Time `gorm:"column:created_at" json:"created_at"`
+	UpdatedAt    time.Time `gorm:"column:updated_at" json:"updated_at"`
+}
+
+// TableName 指定表名
+func (HelmRelease) TableName() string {
+	return "helm_release"
+}
