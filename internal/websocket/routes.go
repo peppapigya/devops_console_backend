@@ -10,4 +10,7 @@ func RegisterWebSocketRoutes(r *gin.Engine) {
 
 	// Pod日志WebSocket
 	ws.GET("/pod/:podname/logs", NewPodLogHandler().HandleWebSocket)
+
+	// Pod终端WebSocket
+	ws.GET("/pod/:podname/exec", NewPodExecHandler().HandleWebSocket)
 }

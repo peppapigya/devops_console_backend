@@ -7,12 +7,14 @@ import (
 )
 
 type NetworkRoute struct {
-	ingressController *network.IngressController
+	ingressController      *network.IngressController
+	ingressClassController *network.IngressClassController
 }
 
 func NewNetworkRoute() *NetworkRoute {
 	return &NetworkRoute{
-		ingressController: network.NewIngressController(),
+		ingressController:      network.NewIngressController(),
+		ingressClassController: network.NewIngressClassController(),
 	}
 }
 
@@ -26,5 +28,12 @@ func (r *NetworkRoute) RegisterSubRouter(apiGroup *gin.RouterGroup) {
 		ingressGroup.POST("/create", r.ingressController.CreateIngress)
 		ingressGroup.PUT("/update/:namespace/:name", r.ingressController.UpdateIngress)
 		ingressGroup.DELETE("/delete/:namespace/:name", r.ingressController.DeleteIngress)
+	}
+
+	// IngressClass
+	ingressClassGroup := apiGroup.Group("/k8s/ingressclass")
+	{
+		ingressClassGroup.GET("/list", r.ingressClassController.GetIngressClassList)
+		ingressClassGroup.GET("/detail/:name", r.ingressClassController.GetIngressClassDetail)
 	}
 }

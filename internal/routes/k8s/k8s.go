@@ -2,9 +2,11 @@ package k8s
 
 import (
 	"devops-console-backend/internal/routes/k8s/cluster"
+	"devops-console-backend/internal/routes/k8s/config"
 	"devops-console-backend/internal/routes/k8s/cronjob"
 	"devops-console-backend/internal/routes/k8s/daemonset"
 	"devops-console-backend/internal/routes/k8s/deployment"
+	"devops-console-backend/internal/routes/k8s/event"
 	"devops-console-backend/internal/routes/k8s/job"
 	"devops-console-backend/internal/routes/k8s/namespace"
 	"devops-console-backend/internal/routes/k8s/network"
@@ -61,4 +63,12 @@ func RegisterK8sRoutes(apiGroup *gin.RouterGroup, db *gorm.DB) {
 	// 注册Network路由
 	networkRoute := network.NewNetworkRoute()
 	networkRoute.RegisterSubRouter(apiGroup)
+
+	// 注册Config路由
+	configRoute := config.NewConfigRoute()
+	configRoute.RegisterSubRouter(apiGroup)
+
+	// 注册Event路由
+	eventRoute := event.NewEventRoute()
+	eventRoute.RegisterSubRouter(apiGroup)
 }

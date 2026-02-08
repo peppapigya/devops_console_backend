@@ -2,7 +2,6 @@ package websocket
 
 import (
 	"devops-console-backend/pkg/configs"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -11,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 // PodLogHandler WebSocket处理器
@@ -51,6 +49,8 @@ func (h *PodLogHandler) HandleWebSocket(c *gin.Context) {
 	podName := c.Param("podname")
 	container := c.Query("container")
 	instanceIdStr := c.Query("instance_id")
+	timestampsStr := c.DefaultQuery("timestamps", "false")
+	tailLinesStr := c.DefaultQuery("tail", "10")
 
 	instanceID := uint(1) // 默认值
 	if instanceIdStr != "" {
@@ -65,13 +65,28 @@ func (h *PodLogHandler) HandleWebSocket(c *gin.Context) {
 		return
 	}
 
-	// 获取Pod日志请求
-	tailLines := int64(100)
+	// 解析 timestamps 参数
+	timestamps := timestampsStr == "true"
+
+	// 解析 tailLines 参数
+	var tailLinesPtr *int64
+	if tailLinesStr != "0" {
+		if tailLinesVal, err := strconv.ParseInt(tailLinesStr, 10, 64); err == nil {
+			tailLinesPtr = &tailLinesVal
+		} else {
+			// 默认10行
+			defaultLines := int64(10)
+			tailLinesPtr = &defaultLines
+		}
+	}
+	// 如果是 "0" 或解析失败，tailLinesPtr 保持 nil，表示所有日志
+
+	// 获取 Pod日志请求
 	req := client.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{
 		Container:  container,
 		Follow:     true,
-		TailLines:  &tailLines,
-		Timestamps: true,
+		TailLines:  tailLinesPtr,
+		Timestamps: timestamps,
 		Previous:   false,
 	})
 
@@ -80,7 +95,7 @@ func (h *PodLogHandler) HandleWebSocket(c *gin.Context) {
 		sendError(conn, "获取日志流失败: "+err.Error())
 		return
 	}
-	defer logStream.Close()
+	defer func() { _ = logStream.Close() }()
 
 	// 读取日志内容
 	buf := make([]byte, 1024)
@@ -118,22 +133,5 @@ func sendError(conn *websocket.Conn, message string) {
 		"error": message,
 		"time":  time.Now().Unix(),
 	}
-	conn.WriteJSON(errorMsg)
-}
-
-// getK8sClient 获取K8s客户端
-func getK8sClient(instanceIdStr string) (*kubernetes.Clientset, error) {
-	if instanceIdStr == "" {
-		return nil, fmt.Errorf("instance_id不能为空")
-	}
-
-	instanceID64, _ := strconv.ParseInt(instanceIdStr, 10, 32)
-	instanceID := uint(instanceID64)
-
-	client, exists := configs.GetK8sClient(instanceID)
-	if !exists {
-		return nil, fmt.Errorf("instance_id %d 对应的K8s客户端未初始化", instanceID)
-	}
-
-	return client, nil
+	_ = conn.WriteJSON(errorMsg)
 }
