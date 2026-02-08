@@ -81,3 +81,5 @@ jwt:
     - /swagger/*
     - /jobs/script/
     - /metrics
+    - /ws/*
+    - /health
