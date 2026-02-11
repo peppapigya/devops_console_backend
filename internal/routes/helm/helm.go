@@ -53,4 +53,5 @@ func (r *HelmRoute) RegisterSubRouter(apiGroup *gin.RouterGroup) {
 
 	// Helm安装/升级路由
 	apiGroup.POST("/helm/install", r.releaseController.InstallChart)
+	apiGroup.PUT("/helm/upgrade", r.releaseController.UpgradeRelease)
 }

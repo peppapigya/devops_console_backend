@@ -56,30 +56,34 @@ type ChartVersionListItem struct {
 	Version    string `json:"version"`
 	AppVersion string `json:"app_version"`
 	CreatedAt  int64  `json:"created_at"`
+	RepoURL    string `json:"repo_url"`
 }
 
 // HelmRelease Request/Response Types
 
 // InstallChartRequest 安装Chart请求
 type InstallChartRequest struct {
-	InstanceID   uint                   `json:"instance_id" binding:"required"`
-	Namespace    string                 `json:"namespace" binding:"required"`
-	ReleaseName  string                 `json:"release_name" binding:"required"`
-	ChartName    string                 `json:"chart_name" binding:"required"`
-	ChartVersion string                 `json:"chart_version"`
-	RepoName     string                 `json:"repo_name" binding:"required"`
-	Values       map[string]interface{} `json:"values"` // 自定义values
+	InstanceID   uint   `json:"instance_id" binding:"required"`
+	Namespace    string `json:"namespace" binding:"required"`
+	ReleaseName  string `json:"release_name" binding:"required"`
+	ChartName    string `json:"chart_name" binding:"required"`
+	ChartVersion string `json:"chart_version"`
+	RepoName     string `json:"repo_name" binding:"required"`
+	ChartURL     string `json:"chart_url"`
+	Values       string `json:"values"` // 自定义values (YAML字符串)
 }
 
 // UpgradeChartRequest 升级Chart请求
 type UpgradeChartRequest struct {
-	InstanceID   uint                   `json:"instance_id" binding:"required"`
-	Namespace    string                 `json:"namespace" binding:"required"`
-	ReleaseName  string                 `json:"release_name" binding:"required"`
-	ChartName    string                 `json:"chart_name"`
-	ChartVersion string                 `json:"chart_version"`
-	RepoName     string                 `json:"repo_name"`
-	Values       map[string]interface{} `json:"values"`
+	InstanceID   uint   `json:"instance_id" binding:"required"`
+	Namespace    string `json:"namespace" binding:"required"`
+	ReleaseName  string `json:"release_name" binding:"required"`
+	ChartName    string `json:"chart_name"`
+	ChartVersion string `json:"chart_version"`
+	RepoName     string `json:"repo_name"`
+	RepoURL      string `json:"repo_url"`
+	ChartURL     string `json:"chart_url"`
+	Values       string `json:"values"` // YAML字符串
 }
 
 // ReleaseListItem Release列表项
@@ -96,16 +100,16 @@ type ReleaseListItem struct {
 
 // ReleaseDetail Release详情
 type ReleaseDetail struct {
-	ID           uint                   `json:"id"`
-	ReleaseName  string                 `json:"release_name"`
-	Namespace    string                 `json:"namespace"`
-	ChartName    string                 `json:"chart_name"`
-	ChartVersion string                 `json:"chart_version"`
-	Status       string                 `json:"status"`
-	Revision     int                    `json:"revision"`
-	Values       map[string]interface{} `json:"values"`
-	Manifest     string                 `json:"manifest"`
-	Notes        string                 `json:"notes"`
-	CreatedAt    int64                  `json:"created_at"`
-	UpdatedAt    int64                  `json:"updated_at"`
+	ID           uint   `json:"id"`
+	ReleaseName  string `json:"release_name"`
+	Namespace    string `json:"namespace"`
+	ChartName    string `json:"chart_name"`
+	ChartVersion string `json:"chart_version"`
+	Status       string `json:"status"`
+	Revision     int    `json:"revision"`
+	Values       string `json:"values"` // YAML字符串
+	Manifest     string `json:"manifest"`
+	Notes        string `json:"notes"`
+	CreatedAt    int64  `json:"created_at"`
+	UpdatedAt    int64  `json:"updated_at"`
 }

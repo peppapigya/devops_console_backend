@@ -42,6 +42,7 @@ func (c *ReleaseController) InstallChart(ctx *gin.Context) {
 		ChartName:    req.ChartName,
 		ChartVersion: req.ChartVersion,
 		RepoName:     req.RepoName,
+		ChartURL:     req.ChartURL,
 		Values:       req.Values,
 	}
 
@@ -57,12 +58,13 @@ func (c *ReleaseController) InstallChart(ctx *gin.Context) {
 func (c *ReleaseController) UninstallRelease(ctx *gin.Context) {
 	helper := utils.NewResponseHelper(ctx)
 
-	var instanceID uint
+	var instanceID int
 	namespace := ctx.Param("namespace")
 	releaseName := ctx.Param("name")
 	utils.GetParam(ctx, "instance_id", &instanceID, nil)
 
-	if err := c.releaseService.UninstallRelease(instanceID, namespace, releaseName); err != nil {
+	if err := c.releaseService.UninstallRelease(uint(instanceID), namespace, releaseName); err != nil {
+		fmt.Printf("卸载失败: %s", err.Error())
 		helper.InternalError(fmt.Sprintf("卸载失败: %s", err.Error()))
 		return
 	}
@@ -74,11 +76,11 @@ func (c *ReleaseController) UninstallRelease(ctx *gin.Context) {
 func (c *ReleaseController) GetReleaseList(ctx *gin.Context) {
 	helper := utils.NewResponseHelper(ctx)
 
-	var instanceID uint
+	var instanceID int
 	namespace := ctx.Query("namespace")
 	utils.GetParam(ctx, "instance_id", &instanceID, nil)
 
-	releases, err := c.releaseService.ListReleases(instanceID, namespace)
+	releases, err := c.releaseService.ListReleases(uint(instanceID), namespace)
 	if err != nil {
 		helper.DatabaseError("获取 Release 列表失败")
 		return
@@ -105,16 +107,48 @@ func (c *ReleaseController) GetReleaseList(ctx *gin.Context) {
 func (c *ReleaseController) GetReleaseDetail(ctx *gin.Context) {
 	helper := utils.NewResponseHelper(ctx)
 
-	var instanceID uint
+	var instanceID int
 	namespace := ctx.Param("namespace")
 	releaseName := ctx.Param("name")
 	utils.GetParam(ctx, "instance_id", &instanceID, nil)
 
-	release, err := c.releaseService.GetReleaseDetail(instanceID, namespace, releaseName)
+	release, err := c.releaseService.GetReleaseDetail(uint(instanceID), namespace, releaseName)
 	if err != nil {
 		helper.DatabaseError("获取 Release 详情失败")
 		return
 	}
 
 	helper.SuccessWithData("获取成功", "release", release)
+}
+
+// UpgradeRelease 升级Helm Release
+func (c *ReleaseController) UpgradeRelease(ctx *gin.Context) {
+	helper := utils.NewResponseHelper(ctx)
+
+	var req helm.UpgradeChartRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		helper.ValidationError(err.Error())
+		return
+	}
+
+	// 调用服务层升级
+	upgradeReq := helmService.UpgradeRequest{
+		InstanceID:   req.InstanceID,
+		Namespace:    req.Namespace,
+		ReleaseName:  req.ReleaseName,
+		ChartName:    req.ChartName,
+		ChartVersion: req.ChartVersion,
+		RepoName:     req.RepoName,
+		RepoURL:      req.RepoURL,
+		ChartURL:     req.ChartURL,
+		Values:       req.Values,
+	}
+
+	if err := c.releaseService.UpgradeRelease(upgradeReq); err != nil {
+		fmt.Printf("升级失败: %s", err.Error())
+		helper.InternalError(fmt.Sprintf("升级失败: %s", err.Error()))
+		return
+	}
+
+	helper.Success("升级成功")
 }

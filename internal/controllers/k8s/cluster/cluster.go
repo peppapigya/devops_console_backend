@@ -743,8 +743,17 @@ func (c *ClusterController) getWorkloadStats(ctx *gin.Context, client *kubernete
 	if pods, err := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{}); err == nil {
 		stats.TotalPods = len(pods.Items)
 		for _, pod := range pods.Items {
-			if pod.Status.Phase == corev1.PodRunning {
+			switch pod.Status.Phase {
+			case corev1.PodRunning:
 				stats.RunningPods++
+			case corev1.PodPending:
+				stats.PendingPods++
+			case corev1.PodFailed:
+				stats.FailedPods++
+			case corev1.PodSucceeded:
+				stats.SucceededPods++
+			case corev1.PodUnknown:
+				stats.UnknownPods++
 			}
 		}
 	}
