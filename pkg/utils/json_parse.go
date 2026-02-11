@@ -87,7 +87,6 @@ func GetParam(c *gin.Context, key string, param interface{}, validate func(param
 	case uint:
 		value, _ := strconv.ParseUint(value, 10, 32)
 		v = uint(value)
-
 	}
 	if validate != nil {
 		validate(param)

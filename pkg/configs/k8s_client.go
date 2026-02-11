@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -262,4 +264,58 @@ func GetMetricsClient(instanceID uint) (*metricsv.Clientset, bool) {
 	}
 
 	return metricsClient, true
+}
+
+// GetDynamicClient 获取动态客户端
+func GetDynamicClient(instanceID uint) (*dynamic.DynamicClient, bool) {
+	k8sClientsLock.RLock()
+	_, exists := k8sClients[instanceID]
+	k8sClientsLock.RUnlock()
+
+	if !exists {
+		return nil, false
+	}
+
+	config, exists := GetK8sConfig(instanceID)
+	if !exists {
+		return nil, false
+	}
+
+	dynamicClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		logs.Error(map[string]interface{}{
+			"instance_id": instanceID,
+			"error":       err.Error(),
+		}, "创建动态客户端失败")
+		return nil, false
+	}
+
+	return dynamicClient, true
+}
+
+// GetApiExtensionsClient 获取ApiExtensions客户端
+func GetApiExtensionsClient(instanceID uint) (*apiextensionsv1.Clientset, bool) {
+	k8sClientsLock.RLock()
+	_, exists := k8sClients[instanceID]
+	k8sClientsLock.RUnlock()
+
+	if !exists {
+		return nil, false
+	}
+
+	config, exists := GetK8sConfig(instanceID)
+	if !exists {
+		return nil, false
+	}
+
+	apiExtensionsClient, err := apiextensionsv1.NewForConfig(config)
+	if err != nil {
+		logs.Error(map[string]interface{}{
+			"instance_id": instanceID,
+			"error":       err.Error(),
+		}, "创建ApiExtensions客户端失败")
+		return nil, false
+	}
+
+	return apiExtensionsClient, true
 }

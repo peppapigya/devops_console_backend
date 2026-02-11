@@ -111,7 +111,7 @@ type HelmRelease struct {
 	ChartName    string    `gorm:"column:chart_name;size:255" json:"chart_name"`
 	ChartVersion string    `gorm:"column:chart_version;size:100" json:"chart_version"`
 	Status       string    `gorm:"column:status;size:50" json:"status"`
-	Values       string    `gorm:"type:text;column:values" json:"values"` // JSON格式
+	Values       string    `gorm:"type:text;column:values" json:"values"` // YAML格式字符串
 	CreatedAt    time.Time `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt    time.Time `gorm:"column:updated_at" json:"updated_at"`
 }

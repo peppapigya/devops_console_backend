@@ -54,12 +54,16 @@ type ClusterMetrics struct {
 
 // WorkloadStats 工作负载统计
 type WorkloadStats struct {
-	Deployments  int `json:"deployments"`
-	StatefulSets int `json:"statefulSets"`
-	DaemonSets   int `json:"daemonSets"`
-	Jobs         int `json:"jobs"`
-	TotalPods    int `json:"totalPods"`
-	RunningPods  int `json:"runningPods"`
+	Deployments   int `json:"deployments"`
+	StatefulSets  int `json:"statefulSets"`
+	DaemonSets    int `json:"daemonSets"`
+	Jobs          int `json:"jobs"`
+	TotalPods     int `json:"totalPods"`
+	RunningPods   int `json:"runningPods"`
+	SucceededPods int `json:"succeededPods"`
+	FailedPods    int `json:"failedPods"`
+	PendingPods   int `json:"pendingPods"`
+	UnknownPods   int `json:"unknownPods"`
 }
 
 // StorageInfo 存储信息

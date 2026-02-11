@@ -120,13 +120,22 @@ func (c *ChartController) GetChartVersions(ctx *gin.Context) {
 	var repoID uint
 	utils.GetParam(ctx, "repo_id", &repoID, nil)
 
-	var versions []dal.HelmChart
-	query := c.db.Where("name = ?", chartName)
-	if repoID > 0 {
-		query = query.Where("repo_id = ?", repoID)
+	type ChartVersionWithRepo struct {
+		dal.HelmChart
+		RepoURL string `gorm:"column:repo_url"`
 	}
 
-	if err := query.Order("created_at DESC").Find(&versions).Error; err != nil {
+	var versions []ChartVersionWithRepo
+	query := c.db.Table("helm_chart").
+		Select("helm_chart.*, helm_repo.url as repo_url").
+		Joins("LEFT JOIN helm_repo ON helm_chart.repo_id = helm_repo.id").
+		Where("helm_chart.name = ?", chartName)
+
+	if repoID > 0 {
+		query = query.Where("helm_chart.repo_id = ?", repoID)
+	}
+
+	if err := query.Order("helm_chart.created_at DESC").Scan(&versions).Error; err != nil {
 		helper.DatabaseError("获取 Chart版本列表失败")
 		return
 	}
@@ -137,6 +146,7 @@ func (c *ChartController) GetChartVersions(ctx *gin.Context) {
 			Version:    v.Version,
 			AppVersion: v.AppVersion,
 			CreatedAt:  v.CreatedAt.Unix(),
+			RepoURL:    v.RepoURL,
 		})
 	}
 
