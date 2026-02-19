@@ -41,3 +41,8 @@ func (p *PipelineRunMapper) GetPagePipelineRuns(pageNum int, pageSize int) ([]*m
 	count, err := p.query.PipelineRun.Count()
 	return info, count, err
 }
+
+func (p *PipelineRunMapper) GetLastPipelineRunByPipelineId(pipelineId uint64) (*model.PipelineRun, error) {
+	run, err := p.query.PipelineRun.WithContext(context.Background()).Where(p.query.PipelineRun.PipelineID.Eq(uint32(pipelineId))).Order(p.query.PipelineRun.ID.Desc()).First()
+	return run, err
+}

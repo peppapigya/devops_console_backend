@@ -2,14 +2,16 @@ package k8s
 
 // PodListItem Pod列表项
 type PodListItem struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
-	Ready     string `json:"ready"`
-	Status    string `json:"status"`
-	Restarts  int32  `json:"restarts"`
-	Age       int64  `json:"age"`
-	IP        string `json:"ip"`
-	Node      string `json:"node"`
+	Name       string            `json:"name"`
+	Namespace  string            `json:"namespace"`
+	Ready      string            `json:"ready"`
+	Status     string            `json:"status"`
+	Restarts   int32             `json:"restarts"`
+	Age        int64             `json:"age"`
+	IP         string            `json:"ip"`
+	Node       string            `json:"node"`
+	Labels     map[string]string `json:"labels"`
+	Containers []Container       `json:"containers"`
 }
 
 // ContainerPort 容器端口

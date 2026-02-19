@@ -10,6 +10,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/yaml"
+	"strings"
 )
 
 // DaemonSetController DaemonSet控制器
@@ -98,8 +100,29 @@ func (c *DaemonSetController) GetDaemonSetList(ctx *gin.Context) {
 	}
 
 	// 简化返回数据，只返回关键信息
+	// 简化返回数据，只返回关键信息
 	var simplifiedList []k8s.DaemonSetListItem
 	for _, daemonSet := range daemonSetList.Items {
+		// 提取资源限制
+		resources := k8s.ResourceInfo{
+			CPURequest:    "0",
+			CPULimit:      "0",
+			MemoryRequest: "0",
+			MemoryLimit:   "0",
+		}
+
+		if len(daemonSet.Spec.Template.Spec.Containers) > 0 {
+			c := daemonSet.Spec.Template.Spec.Containers[0]
+			if c.Resources.Requests != nil {
+				resources.CPURequest = c.Resources.Requests.Cpu().String()
+				resources.MemoryRequest = c.Resources.Requests.Memory().String()
+			}
+			if c.Resources.Limits != nil {
+				resources.CPULimit = c.Resources.Limits.Cpu().String()
+				resources.MemoryLimit = c.Resources.Limits.Memory().String()
+			}
+		}
+
 		simplifiedList = append(simplifiedList, k8s.DaemonSetListItem{
 			Name:      daemonSet.Name,
 			Namespace: daemonSet.Namespace,
@@ -108,6 +131,7 @@ func (c *DaemonSetController) GetDaemonSetList(ctx *gin.Context) {
 			Ready:     daemonSet.Status.NumberReady,
 			Available: daemonSet.Status.NumberAvailable,
 			Created:   daemonSet.CreationTimestamp.Time,
+			Resources: resources,
 		})
 	}
 
@@ -141,7 +165,29 @@ func (c *DaemonSetController) CreateDaemonSet(ctx *gin.Context) {
 		return
 	}
 
-	daemonSet := c.convertCreateRequestToK8sDaemonSet(namespace, daemonSetReq)
+	var daemonSet *appsv1.DaemonSet
+
+	// 如果提供了YAML，优先使用YAML创建
+	if daemonSetReq.YAML != "" {
+		decoder := yaml.NewYAMLOrJSONDecoder(strings.NewReader(daemonSetReq.YAML), 4096)
+		daemonSet = &appsv1.DaemonSet{}
+		if err := decoder.Decode(daemonSet); err != nil {
+			helper := utils.NewResponseHelper(ctx)
+			helper.BadRequest("YAML解析失败: " + err.Error())
+			return
+		}
+		// 确保命名空间正确
+		daemonSet.Namespace = namespace
+	} else {
+		// 验证必填字段
+		if daemonSetReq.Name == "" || daemonSetReq.Image == "" {
+			helper := utils.NewResponseHelper(ctx)
+			helper.BadRequest("Name和Image不能为空")
+			return
+		}
+		daemonSet = c.convertCreateRequestToK8sDaemonSet(namespace, daemonSetReq)
+	}
+
 	_, err := client.AppsV1().DaemonSets(namespace).Create(ctx, daemonSet, metav1.CreateOptions{})
 	if err != nil {
 		helper := utils.NewResponseHelper(ctx)
@@ -151,7 +197,7 @@ func (c *DaemonSetController) CreateDaemonSet(ctx *gin.Context) {
 
 	helper := utils.NewResponseHelper(ctx)
 	helper.SuccessWithData("DaemonSet创建成功", "data", map[string]interface{}{
-		"name":      daemonSetReq.Name,
+		"name":      daemonSet.Name,
 		"namespace": namespace,
 	})
 }

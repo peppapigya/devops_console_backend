@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -60,6 +61,15 @@ func (c *DeploymentController) GetDeploymentDetail(ctx *gin.Context) {
 		conditions[i] = condition
 	}
 
+	// 提取容器信息
+	var containers []k8s.ContainerInfo
+	for _, c := range deploymentDetail.Spec.Template.Spec.Containers {
+		containers = append(containers, k8s.ContainerInfo{
+			Name:  c.Name,
+			Image: c.Image,
+		})
+	}
+
 	logs.Info(logData, "获取Deployment详情成功")
 	helper := utils.NewResponseHelper(ctx)
 	helper.SuccessWithData("success", "deploymentDetail", k8s.DeploymentDetail{
@@ -70,7 +80,9 @@ func (c *DeploymentController) GetDeploymentDetail(ctx *gin.Context) {
 		Available:  deploymentDetail.Status.AvailableReplicas,
 		Conditions: conditions,
 		Labels:     deploymentDetail.Labels,
+		Selector:   deploymentDetail.Spec.Selector.MatchLabels,
 		Age:        deploymentDetail.CreationTimestamp.Unix(),
+		Containers: containers,
 	})
 }
 
@@ -113,6 +125,30 @@ func (c *DeploymentController) GetDeploymentList(ctx *gin.Context) {
 	// 简化返回数据，只返回关键信息
 	var simplifiedList []k8s.DeploymentListItem
 	for _, deployment := range deploymentList.Items {
+		// 提取第一个容器的镜像和资源配额
+		image := ""
+		resources := k8s.ResourceInfo{
+			CPURequest:    "0",
+			CPULimit:      "0",
+			MemoryRequest: "0",
+			MemoryLimit:   "0",
+		}
+
+		if len(deployment.Spec.Template.Spec.Containers) > 0 {
+			c := deployment.Spec.Template.Spec.Containers[0]
+			image = c.Image
+
+			// 获取资源限制
+			if c.Resources.Requests != nil {
+				resources.CPURequest = c.Resources.Requests.Cpu().String()
+				resources.MemoryRequest = c.Resources.Requests.Memory().String()
+			}
+			if c.Resources.Limits != nil {
+				resources.CPULimit = c.Resources.Limits.Cpu().String()
+				resources.MemoryLimit = c.Resources.Limits.Memory().String()
+			}
+		}
+
 		simplifiedList = append(simplifiedList, k8s.DeploymentListItem{
 			Name:      deployment.Name,
 			Namespace: deployment.Namespace,
@@ -120,6 +156,8 @@ func (c *DeploymentController) GetDeploymentList(ctx *gin.Context) {
 			Ready:     deployment.Status.ReadyReplicas,
 			Available: deployment.Status.AvailableReplicas,
 			Created:   deployment.CreationTimestamp.Time,
+			Image:     image,
+			Resources: resources,
 		})
 	}
 
@@ -257,13 +295,13 @@ func (c *DeploymentController) ScaleDeployment(ctx *gin.Context) {
 		"deploymentName": deploymentName,
 		"replicasStr":    replicasStr,
 	}
-	logs.Debug(logData, "扩缩容Deployment")
+	logs.Info(logData, "接收到扩缩容请求")
 
 	replicas, err := strconv.ParseInt(replicasStr, 10, 32)
 	if err != nil {
-		logs.Error(logData, "副本数参数转换失败: "+err.Error())
+		logs.Error(map[string]interface{}{"replicasStr": replicasStr, "error": err.Error(), "data": logData}, "副本数参数解析失败")
 		helper := utils.NewResponseHelper(ctx)
-		helper.BadRequest("副本数参数错误")
+		helper.BadRequest("副本数必须为整数")
 		return
 	}
 
@@ -296,7 +334,36 @@ func (c *DeploymentController) ScaleDeployment(ctx *gin.Context) {
 	if err != nil {
 		logs.Error(logData, "获取Deployment失败: "+err.Error())
 		helper := utils.NewResponseHelper(ctx)
-		helper.NotFound("Deployment不存在")
+		if errors.IsNotFound(err) {
+			helper.NotFound("Deployment不存在")
+		} else {
+			helper.InternalError("获取Deployment失败: " + err.Error())
+		}
+		return
+	}
+
+	// 检查是否存在 HPA
+	hpaList, err := client.AutoscalingV2().HorizontalPodAutoscalers(namespace).List(ctx, metav1.ListOptions{})
+	if err == nil {
+		for _, hpa := range hpaList.Items {
+			if hpa.Spec.ScaleTargetRef.Kind == "Deployment" && hpa.Spec.ScaleTargetRef.Name == deploymentName {
+				// 存在 HPA，禁止手动扩缩容
+				// 只有当 HPA 的 min/max replicas 有限制时才阻止? 通常 HPA 存在就意味着它接管了
+				if hpa.Spec.MinReplicas != nil || hpa.Spec.MaxReplicas > 0 {
+					logs.Warning(map[string]interface{}{"hpa": hpa.Name, "data": logData}, "Deployment受HPA管理，禁止手动扩缩容")
+					helper := utils.NewResponseHelper(ctx)
+					helper.Error(409, fmt.Sprintf("该Deployment受HPA(%s)管理，无法手动扩缩容。请修改HPA配置或删除HPA。", hpa.Name))
+					return
+				}
+			}
+		}
+	}
+
+	// 检查副本数是否发生变化
+	if deployment.Spec.Replicas != nil && *deployment.Spec.Replicas == replicas32 {
+		logs.Info(logData, "副本数未改变，跳过更新")
+		helper := utils.NewResponseHelper(ctx)
+		helper.Success("副本数未改变")
 		return
 	}
 
@@ -319,6 +386,12 @@ func (c *DeploymentController) ScaleDeployment(ctx *gin.Context) {
 
 	_, err = client.AppsV1().Deployments(namespace).Update(ctx, deployment, metav1.UpdateOptions{})
 	if err != nil {
+		if errors.IsConflict(err) {
+			logs.Warning(logData, "更新冲突: "+err.Error())
+			helper := utils.NewResponseHelper(ctx)
+			helper.InternalError("资源版本冲突，请刷新后重试")
+			return
+		}
 		logs.Error(map[string]interface{}{"replicas": replicas32, "error": err.Error(), "data": logData}, "扩缩容Deployment失败")
 		helper := utils.NewResponseHelper(ctx)
 		helper.InternalError("扩缩容Deployment失败: " + err.Error())

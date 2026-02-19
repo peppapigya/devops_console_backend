@@ -25,6 +25,10 @@ type Pipeline struct {
 	CreatedAt     *time.Time     `gorm:"column:created_at;type:timestamp;default:CURRENT_TIMESTAMP" json:"createdAt"`
 	UpdatedAt     *time.Time     `gorm:"column:updated_at;type:timestamp;default:CURRENT_TIMESTAMP" json:"updatedAt"`
 	DeletedAt     gorm.DeletedAt `gorm:"column:deleted_at;type:datetime" json:"deletedAt"`
+
+	// Runtime fields (not in DB)
+	LastRunStatus *string    `gorm:"-" json:"last_run_status"`
+	LastRunTime   *time.Time `gorm:"-" json:"last_run_time"`
 }
 
 // TableName Pipeline's table name

@@ -4,10 +4,11 @@ import "time"
 
 // DaemonSetCreateRequest 创建DaemonSet请求
 type DaemonSetCreateRequest struct {
-	Name   string            `json:"name" binding:"required"`
+	Name   string            `json:"name"`
 	Labels map[string]string `json:"labels"`
-	Image  string            `json:"image" binding:"required"`
+	Image  string            `json:"image"`
 	Port   int32             `json:"port"`
+	YAML   string            `json:"yaml"`
 }
 
 // DaemonSetUpdateRequest 更新DaemonSet请求
@@ -17,13 +18,14 @@ type DaemonSetUpdateRequest struct {
 
 // DaemonSetListItem DaemonSet列表项
 type DaemonSetListItem struct {
-	Name      string    `json:"name"`
-	Namespace string    `json:"namespace"`
-	Current   int32     `json:"current"`
-	Desired   int32     `json:"desired"`
-	Ready     int32     `json:"ready"`
-	Available int32     `json:"available"`
-	Created   time.Time `json:"created"`
+	Name      string       `json:"name"`
+	Namespace string       `json:"namespace"`
+	Current   int32        `json:"current"`
+	Desired   int32        `json:"desired"`
+	Ready     int32        `json:"ready"`
+	Available int32        `json:"available"`
+	Created   time.Time    `json:"created"`
+	Resources ResourceInfo `json:"resources"`
 }
 
 // DaemonSetDetail DaemonSet详情

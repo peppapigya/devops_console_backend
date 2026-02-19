@@ -38,7 +38,8 @@ func InitializePipelineController() *cicd.PipelinesController {
 func InitializePipelineRunsController() *cicd.PipelineRunController {
 	db := configs.NewDB()
 	pipelineRunMapper := mapper.NewPipelineRunMapper(db)
-	pipelineRunController := cicd.NewPipelineRunController(pipelineRunMapper)
+	pipelinesMapper := mapper.NewPipelinesMapper(db)
+	pipelineRunController := cicd.NewPipelineRunController(pipelineRunMapper, pipelinesMapper)
 	return pipelineRunController
 }
 

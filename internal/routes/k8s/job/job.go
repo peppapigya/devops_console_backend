@@ -23,8 +23,9 @@ func (r *JobRoute) RegisterSubRouter(apiGroup *gin.RouterGroup) {
 	jobGroup := apiGroup.Group("/k8s/job")
 	{
 		jobGroup.GET("/detail/:namespace/:jobName", r.controller.GetJobDetail)
+		jobGroup.GET("/yaml/:namespace/:jobName", r.controller.GetJobYAML)
 		jobGroup.GET("/list/:namespace", r.controller.GetJobList)
-		jobGroup.POST("/create", r.controller.CreateJob)
+		jobGroup.POST("/create/:namespace", r.controller.CreateJob)
 		jobGroup.DELETE("/delete/:namespace/:jobName", r.controller.DeleteJob)
 	}
 }
