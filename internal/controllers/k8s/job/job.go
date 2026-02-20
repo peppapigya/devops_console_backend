@@ -14,6 +14,9 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	k8sjson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/utils/pointer"
 )
 
@@ -115,6 +118,56 @@ func (c *JobController) GetJobDetail(ctx *gin.Context) {
 	helper.SuccessWithData("success", "jobDetail", jobDetailResponse)
 }
 
+// GetJobYAML 获取Job YAML
+func (c *JobController) GetJobYAML(ctx *gin.Context) {
+	namespace := ctx.Param("namespace")
+	jobName := ctx.Param("jobName")
+
+	instanceIDStr := ctx.Query("instance_id")
+	instanceID := uint(1) // 默认值
+	if instanceIDStr != "" {
+		if id, err := strconv.ParseInt(instanceIDStr, 10, 32); err == nil {
+			instanceID = uint(id)
+		}
+	}
+
+	client, exists := configs.GetK8sClient(instanceID)
+	if !exists {
+		helper := utils.NewResponseHelper(ctx)
+		helper.InternalError("K8s客户端未初始化")
+		return
+	}
+
+	job, err := client.BatchV1().Jobs(namespace).Get(ctx, jobName, metav1.GetOptions{})
+	if err != nil {
+		helper := utils.NewResponseHelper(ctx)
+		helper.NotFound("Job不存在")
+		return
+	}
+
+	// 移除 managedFields 以保持 YAML 整洁
+	job.ManagedFields = nil
+
+	// 确保 TypeMeta 存在 (client-go 有时会丢失它)
+	job.TypeMeta = metav1.TypeMeta{
+		Kind:       "Job",
+		APIVersion: "batch/v1",
+	}
+
+	// 序列化为 YAML
+	serializer := k8sjson.NewYAMLSerializer(k8sjson.DefaultMetaFactory, nil, nil)
+	var sb strings.Builder
+	err = serializer.Encode(job, &sb)
+	if err != nil {
+		helper := utils.NewResponseHelper(ctx)
+		helper.InternalError("YAML序列化失败: " + err.Error())
+		return
+	}
+
+	helper := utils.NewResponseHelper(ctx)
+	helper.SuccessWithData("success", "yaml", sb.String())
+}
+
 // GetJobList 获取Job列表
 func (c *JobController) GetJobList(ctx *gin.Context) {
 	namespace := ctx.Param("namespace")
@@ -182,6 +235,26 @@ func (c *JobController) GetJobList(ctx *gin.Context) {
 			endTime = job.Status.CompletionTime.String()
 		}
 
+		// 提取资源限制
+		resources := k8s.ResourceInfo{
+			CPURequest:    "0",
+			CPULimit:      "0",
+			MemoryRequest: "0",
+			MemoryLimit:   "0",
+		}
+
+		if len(job.Spec.Template.Spec.Containers) > 0 {
+			c := job.Spec.Template.Spec.Containers[0]
+			if c.Resources.Requests != nil {
+				resources.CPURequest = c.Resources.Requests.Cpu().String()
+				resources.MemoryRequest = c.Resources.Requests.Memory().String()
+			}
+			if c.Resources.Limits != nil {
+				resources.CPULimit = c.Resources.Limits.Cpu().String()
+				resources.MemoryLimit = c.Resources.Limits.Memory().String()
+			}
+		}
+
 		// 构建响应对象
 		rsp := k8s.JobListItem{
 			JobName:        job.Name,
@@ -193,6 +266,7 @@ func (c *JobController) GetJobList(ctx *gin.Context) {
 			StartTime:      startTime,
 			EndTime:        endTime,
 			PodsStatuses:   podStatus,
+			Resources:      resources,
 		}
 
 		rspList = append(rspList, rsp)
@@ -202,18 +276,19 @@ func (c *JobController) GetJobList(ctx *gin.Context) {
 	helper.SuccessWithData("success", "jobList", rspList)
 }
 
-// CreateJob 创建Job
+// CreateJob 创建Job（支持YAML方式）
 func (c *JobController) CreateJob(ctx *gin.Context) {
-	var req k8s.JobCreateRequest
+	namespace := ctx.Param("namespace")
 
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	var yamlReq k8s.YAMLJobCreateRequest
+	if err := ctx.ShouldBindJSON(&yamlReq); err != nil {
 		helper := utils.NewResponseHelper(ctx)
 		helper.BadRequest("请求参数错误: " + err.Error())
 		return
 	}
 
 	instanceIDStr := ctx.Query("instance_id")
-	instanceID := uint(1) // 默认值
+	instanceID := uint(1)
 	if instanceIDStr != "" {
 		if id, err := strconv.ParseInt(instanceIDStr, 10, 32); err == nil {
 			instanceID = uint(id)
@@ -227,22 +302,23 @@ func (c *JobController) CreateJob(ctx *gin.Context) {
 		return
 	}
 
-	k8sJob := c.convertCreateRequestToK8sJob(&req)
-	if k8sJob == nil {
+	// 使用YAML创建Job
+	k8sJob, err := c.createJobFromYAML(yamlReq.YAML, namespace)
+	if err != nil {
 		helper := utils.NewResponseHelper(ctx)
-		helper.BadRequest("命令不能为空")
+		helper.BadRequest("YAML解析失败: " + err.Error())
 		return
 	}
 
-	_, err := client.BatchV1().Jobs(k8sJob.Namespace).Create(ctx, k8sJob, metav1.CreateOptions{})
+	_, err = client.BatchV1().Jobs(namespace).Create(ctx, k8sJob, metav1.CreateOptions{})
 	if err != nil {
 		helper := utils.NewResponseHelper(ctx)
-		helper.InternalError("创建Job失败: " + err.Error())
+		helper.InternalError("创建 Job 失败: " + err.Error())
 		return
 	}
 
 	helper := utils.NewResponseHelper(ctx)
-	helper.Success("Job创建成功")
+	helper.Success("Job 创建成功")
 }
 
 // DeleteJob 删除Job
@@ -305,4 +381,31 @@ func (c *JobController) convertCreateRequestToK8sJob(req *k8s.JobCreateRequest) 
 			},
 		},
 	}
+}
+
+// createJobFromYAML 从YAML创建Job对象
+func (c *JobController) createJobFromYAML(yamlContent string, namespace string) (*batchv1.Job, error) {
+	// 创建scheme并注册batch/v1和core/v1类型
+	scheme := runtime.NewScheme()
+	_ = batchv1.AddToScheme(scheme)
+	_ = corev1.AddToScheme(scheme)
+
+	// 使用K8s的反序列化器解析YAML
+	decode := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode
+	obj, _, err := decode([]byte(yamlContent), nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("YAML解析失败: %v", err)
+	}
+
+	job, ok := obj.(*batchv1.Job)
+	if !ok {
+		return nil, fmt.Errorf("YAML内容不是有效的Job资源")
+	}
+
+	// 如果YAML中没有指定namespace，使用URL参数中的namespace
+	if job.Namespace == "" {
+		job.Namespace = namespace
+	}
+
+	return job, nil
 }

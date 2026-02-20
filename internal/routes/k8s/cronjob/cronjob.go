@@ -22,7 +22,10 @@ func NewCronJobRoute() *CronJobRoute {
 func (r *CronJobRoute) RegisterSubRouter(apiGroup *gin.RouterGroup) {
 	cronjobGroup := apiGroup.Group("/k8s/cronjob")
 	{
-		cronjobGroup.POST("/create", r.controller.CreateCronJob)
+		cronjobGroup.POST("/create/:namespace", r.controller.CreateCronJob)
+		cronjobGroup.GET("/detail/:namespace/:cronJobName", r.controller.GetCronJobDetail)
+		cronjobGroup.GET("/yaml/:namespace/:cronJobName", r.controller.GetCronJobYAML)
+		cronjobGroup.PUT("/update/yaml/:namespace", r.controller.UpdateCronJobYAML)
 		cronjobGroup.DELETE("/delete", r.controller.DeleteCronJob)
 		cronjobGroup.GET("/list/:namespace", r.controller.GetCronJobList)
 		cronjobGroup.PUT("/update", r.controller.UpdateCronJob)

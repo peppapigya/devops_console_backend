@@ -436,15 +436,27 @@ func (c *PodController) convertPodToListItem(pod corev1.Pod) k8s.PodListItem {
 		podStatus = "Running"
 	}
 
+	// 转换容器
+	containers := make([]k8s.Container, 0, len(pod.Spec.Containers))
+	for _, c := range pod.Spec.Containers {
+		containers = append(containers, k8s.Container{
+			Name:  c.Name,
+			Image: c.Image,
+			// Resources temporarily omitted or simplified if needed
+		})
+	}
+
 	return k8s.PodListItem{
-		Name:      pod.Name,
-		Namespace: pod.Namespace,
-		Ready:     fmt.Sprintf("%d/%d", readyC, totalC),
-		Status:    podStatus,
-		Restarts:  restartC,
-		Age:       pod.CreationTimestamp.Unix(),
-		IP:        pod.Status.PodIP,
-		Node:      pod.Spec.NodeName,
+		Name:       pod.Name,
+		Namespace:  pod.Namespace,
+		Ready:      fmt.Sprintf("%d/%d", readyC, totalC),
+		Status:     podStatus,
+		Restarts:   restartC,
+		Age:        pod.CreationTimestamp.Unix(),
+		IP:         pod.Status.PodIP,
+		Node:       pod.Spec.NodeName,
+		Labels:     pod.Labels,
+		Containers: containers,
 	}
 }
 

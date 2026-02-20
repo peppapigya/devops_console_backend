@@ -37,6 +37,31 @@ func (p *PipelinesMapper) DeletePipeline(id uint32) error {
 }
 func (p *PipelinesMapper) GetPagePipelines(pageNum int, pageSize int) ([]*model.Pipeline, int64, error) {
 	data, err := p.query.Pipeline.WithContext(context.Background()).Limit(pageSize).Offset((pageNum - 1) * pageSize).Find()
+	if err != nil {
+		return nil, 0, err
+	}
 	count, err := p.query.Pipeline.WithContext(context.Background()).Count()
+
+	// Fill runtime info
+	for _, pipeline := range data {
+		var lastRun model.PipelineRun
+		// Find the latest run for this pipeline
+		err := p.db.Model(&model.PipelineRun{}).
+			Where("pipeline_id = ?", pipeline.ID).
+			Order("id desc").
+			First(&lastRun).Error
+		if err == nil {
+			pipeline.LastRunStatus = lastRun.Status
+			pipeline.LastRunTime = lastRun.StartTime
+		}
+	}
+
 	return data, count, err
+}
+
+func (p *PipelinesMapper) GetPipelineStepsByPipelineId(pipelineId uint32) ([]*model.PipelineStep, error) {
+	return p.query.PipelineStep.WithContext(context.Background()).
+		Where(p.query.PipelineStep.PipelineID.Eq(pipelineId)).
+		Order(p.query.PipelineStep.Sort).
+		Find()
 }

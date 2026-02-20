@@ -24,6 +24,8 @@ func RegisterCiCdRouters(router *gin.RouterGroup) {
 		pipelineRunRouter.DELETE("/:id", pipelineRunController.DeletePipelineRun)
 		pipelineRunRouter.PUT("/", pipelineRunController.UpdatePipelineRun)
 		pipelineRunRouter.GET("/page", pipelineRunController.GetPagePipelineRuns)
+		pipelineRunRouter.GET("/:id/logs", pipelineRunController.GetPipelineRunLogs)
+		pipelineRunRouter.GET("/:id/steps", pipelineRunController.GetPipelineRunSteps)
 	}
 
 	projectsMapper := wireInfo.InitializeProjectsController()
@@ -36,6 +38,9 @@ func RegisterCiCdRouters(router *gin.RouterGroup) {
 		projectsRouter.GET("/list", projectsMapper.GetProjects)
 	}
 	argoController := wireInfo.InitializeArgoController()
+	// Add path alias for frontend compatibility
+	pipelineGroup.POST("/:pipelineId/run", argoController.ExecutePipeline)
+
 	argoRouter := router.Group("/argo")
 	{
 		argoRouter.POST("/execute", argoController.ExecutePipeline)
