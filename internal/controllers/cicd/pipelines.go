@@ -56,7 +56,7 @@ func (c *PipelinesController) CreatePipeline(ctx *gin.Context) {
 		return
 	}
 
-	helper.Success("创建数据成功")
+	helper.SuccessWithData("创建数据成功", "data", pipeline)
 }
 
 func (c *PipelinesController) DeletePipeline(ctx *gin.Context) {

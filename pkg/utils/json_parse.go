@@ -78,15 +78,14 @@ func GetParam(c *gin.Context, key string, param interface{}, validate func(param
 		i64, _ := strconv.ParseInt(value, 10, 64)
 		*v = i64
 	case *bool:
-		// ParseBool 支持 "true", "false", "1", "0", "t", "f" 等
 		b, _ := strconv.ParseBool(value)
 		*v = b
 	case *uint32:
 		u32, _ := strconv.ParseUint(value, 10, 32)
 		*v = uint32(u32)
-	case uint:
-		value, _ := strconv.ParseUint(value, 10, 32)
-		v = uint(value)
+	case *uint64:
+		u64, _ := strconv.ParseUint(value, 10, 64)
+		*v = u64
 	}
 	if validate != nil {
 		validate(param)

@@ -20,6 +20,7 @@ type Pipeline struct {
 	Name          string         `gorm:"column:name;type:varchar(64);not null;comment:流水线名称" json:"name"`                                              // 流水线名称
 	GitURL        string         `gorm:"column:git_url;type:varchar(255);not null;comment:代码仓库地址" json:"gitUrl"`                                       // 代码仓库地址
 	Branch        *string        `gorm:"column:branch;type:varchar(64);default:main;comment:默认构建分支" json:"branch"`                                     // 默认构建分支
+	GitToken      *string        `gorm:"column:git_token;type:varchar(512);comment:私有仓库访问Token" json:"gitToken"`                                       // 私有仓库访问Token（HTTPS）
 	ArgoTemplate  string         `gorm:"column:argo_template;type:varchar(64);not null;comment:关联的 Argo WorkflowTemplate 名称" json:"argoTemplate"`      // 关联的 Argo WorkflowTemplate 名称
 	ParamsConfig  *string        `gorm:"column:params_config;type:json;comment:自定义参数配置(环境变量、构建参数等)" json:"paramsConfig"`                               // 自定义参数配置(环境变量、构建参数等)
 	CreatedAt     *time.Time     `gorm:"column:created_at;type:timestamp;default:CURRENT_TIMESTAMP" json:"createdAt"`
