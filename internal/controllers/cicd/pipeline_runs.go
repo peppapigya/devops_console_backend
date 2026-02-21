@@ -46,7 +46,6 @@ func (c *PipelineRunController) resolveRunId(ctx *gin.Context) (uint64, error) {
 		return uint64(lastRun.ID), nil
 	}
 	var id uint64
-	// Try parsing directly
 	_, err := fmt.Sscanf(idStr, "%d", &id)
 	if err != nil {
 		// Fallback to GetParam if strict int parsing failed (though Sscanf is usually enough for uint64)
@@ -61,7 +60,7 @@ func (c *PipelineRunController) GetPipelineRunById(ctx *gin.Context) {
 
 	id, err := c.resolveRunId(ctx)
 	if err != nil {
-		helper.BadRequest("无效的ID或记录不存在")
+		helper.BadRequest("无效的 ID或记录不存在")
 		return
 	}
 
@@ -106,9 +105,36 @@ func (c *PipelineRunController) DeletePipelineRun(ctx *gin.Context) {
 	var id uint64
 	helper := utils.NewResponseHelper(ctx)
 	utils.GetParam(ctx, "id", &id, nil)
-	err := c.mapper.DeletePipelineRun(id)
+
+	// 1. 先查 run 记录，获取 workflowName 和 pipelineId
+	run, err := c.mapper.GetPipelineRunById(id)
+	if err != nil || run == nil {
+		helper.NotFound("运行记录不存在")
+		return
+	}
+
+	// 2. 查 pipeline 获取 k8sInstanceId，用于构造 Argo 客户端
+	if run.WorkflowName != "" {
+		pipeline, pErr := c.pipelinesMapper.GetPipelineById(run.PipelineID)
+		if pErr == nil && pipeline != nil {
+			restConfig, exist := configs.GetK8sConfig(uint(pipeline.K8sInstanceID))
+			if exist {
+				argoClient, aErr := versioned.NewForConfig(restConfig)
+				if aErr == nil {
+					// 删除 Argo Workflow，如果不存在则忽略
+					_ = argoClient.ArgoprojV1alpha1().Workflows("argo").Delete(
+						ctx, run.WorkflowName, metav1.DeleteOptions{},
+					)
+				}
+			}
+		}
+	}
+
+	// 3. 删除 DB 记录
+	err = c.mapper.DeletePipelineRun(id)
 	if err != nil {
 		helper.DatabaseError(err.Error())
+		return
 	}
 	helper.Success("success")
 }
@@ -116,10 +142,12 @@ func (c *PipelineRunController) DeletePipelineRun(ctx *gin.Context) {
 func (c *PipelineRunController) GetPagePipelineRuns(ctx *gin.Context) {
 	var pageNum int
 	var pageSize int
+	var pipelineId uint64
 	helper := utils.NewResponseHelper(ctx)
 	utils.GetParam(ctx, "pageNum", &pageNum, nil)
 	utils.GetParam(ctx, "pageSize", &pageSize, nil)
-	pipelineRuns, total, err := c.mapper.GetPagePipelineRuns(pageNum, pageSize)
+	utils.GetParam(ctx, "pipelineId", &pipelineId, nil)
+	pipelineRuns, total, err := c.mapper.GetPagePipelineRuns(pageNum, pageSize, pipelineId)
 	response := &common.PageInfoResponse[*model.PipelineRun]{
 		Data:     pipelineRuns,
 		PageNum:  pageNum,
@@ -177,24 +205,40 @@ func (c *PipelineRunController) GetPipelineRunLogs(ctx *gin.Context) {
 		return
 	}
 
-	// 4. Find Node Name first
-	var targetNodeName string
+	// 4. 将前端传入的原始步骤名转换为 Argo task 名（DisplayName），用于节点匹配
 	stepName = strings.TrimSpace(stepName)
-
-	// We need to find the node in the workflow status that corresponds to our step
-	for _, node := range wf.Status.Nodes {
-		if node.Type == "Pod" {
-			// Match by DisplayName (e.g. "build") or TemplateName (e.g. "temple-build")
-			// Argo often names templates like "temple-pipeline-name..." but simpler checks first
-			if node.DisplayName == stepName || node.TemplateName == stepName || node.TemplateName == "temple-"+stepName {
-				targetNodeName = node.Name
-				break
+	argoStepName := stepName // git-clone 直接使用原名
+	if stepName != "git-clone" {
+		// 从 DB 取 definedSteps，重建与 argo_controller 相同的 nameMap
+		definedSteps, dErr := c.pipelinesMapper.GetPipelineStepsByPipelineId(run.PipelineID)
+		if dErr == nil {
+			for i, s := range definedSteps {
+				safe := sanitizeArgoName(s.Name)
+				var mapped string
+				if safe == "" || safe == "step" {
+					mapped = fmt.Sprintf("s%d", i)
+				} else {
+					mapped = fmt.Sprintf("s%d-%s", i, safe)
+				}
+				if s.Name == stepName {
+					argoStepName = mapped
+					break
+				}
 			}
 		}
 	}
 
+	// 5. Find Node Name by matching Argo DisplayName
+	var targetNodeName string
+	for _, node := range wf.Status.Nodes {
+		if node.Type == "Pod" && node.DisplayName == argoStepName {
+			targetNodeName = node.Name
+			break
+		}
+	}
+
 	if targetNodeName == "" {
-		helper.NotFound(fmt.Sprintf("未找到对应步骤的 Node. StepName: %s", stepName))
+		helper.NotFound(fmt.Sprintf("未找到对应步骤的 Node. StepName: %s (argoName: %s)", stepName, argoStepName))
 		return
 	}
 
@@ -235,7 +279,6 @@ func (c *PipelineRunController) GetPipelineRunLogs(ctx *gin.Context) {
 	fmt.Printf("[Debug] Resolved Pod Name via K8s List: %s\n", podName)
 
 	// 6. Get Logs
-	// Argo pods usually have "main" and "wait" containers. We need "main".
 	req := k8sClient.CoreV1().Pods("argo").GetLogs(podName, &corev1.PodLogOptions{
 		Container: "main",
 	})
@@ -297,69 +340,106 @@ func (c *PipelineRunController) GetPipelineRunSteps(ctx *gin.Context) {
 		return
 	}
 
-	// 3. Map Argo Node Status to Defined Steps
-	type StepStatus struct {
-		Name     string `json:"name"`
-		Status   string `json:"status"`
-		Duration string `json:"duration"`
-		PodName  string `json:"podName"` // Add Pod Name for details
-		Image    string `json:"image"`   // Add Image for details
-	}
-	var steps []StepStatus
-
-	nodeStatusMap := make(map[string]struct {
+	// 3. 构建 nodeStatusMap: key = Argo 节点的 DisplayName（即 DAGTask.Name）
+	type nodeInfo struct {
 		Status     string
 		StartedAt  time.Time
 		FinishedAt time.Time
 		PodName    string
-	})
-
+	}
+	nodeStatusMap := make(map[string]nodeInfo)
 	for _, node := range wf.Status.Nodes {
-		if node.Type == "Pod" {
-			// Key by DisplayName (step name) or clean TemplateName
-			name := node.DisplayName
-			if name == "" {
-				name = strings.TrimPrefix(node.TemplateName, "temple-")
-			}
-			nodeStatusMap[name] = struct {
-				Status     string
-				StartedAt  time.Time
-				FinishedAt time.Time
-				PodName    string
-			}{
-				Status:     string(node.Phase),
-				StartedAt:  node.StartedAt.Time,
-				FinishedAt: node.FinishedAt.Time,
-				PodName:    node.Name, // This is the actual Pod Name
-			}
+		if node.Type != "Pod" {
+			continue
+		}
+		key := node.DisplayName
+		if key == "" {
+			key = node.TemplateName
+		}
+		nodeStatusMap[key] = nodeInfo{
+			Status:     string(node.Phase),
+			StartedAt:  node.StartedAt.Time,
+			FinishedAt: node.FinishedAt.Time,
+			PodName:    node.Name,
 		}
 	}
 
-	// 4. Construct Result in Defined Order
-	for _, defStep := range definedSteps {
-		status := "Pending"
-		duration := ""
-		podName := ""
-
-		if nodeInfo, ok := nodeStatusMap[defStep.Name]; ok {
-			status = nodeInfo.Status
-			if !nodeInfo.StartedAt.IsZero() && !nodeInfo.FinishedAt.IsZero() {
-				d := nodeInfo.FinishedAt.Sub(nodeInfo.StartedAt)
-				duration = d.String()
-			} else if !nodeInfo.StartedAt.IsZero() {
-				// Running duration
-				d := time.Since(nodeInfo.StartedAt).Round(time.Second)
-				duration = d.String()
-			}
-			podName = nodeInfo.PodName
+	// 4. 与 argo_controller.go 完全相同的 nameMap 逻辑，确保能正确反查 Argo task 名
+	stepNameMap := make(map[string]string, len(definedSteps))
+	for i, step := range definedSteps {
+		safe := sanitizeArgoName(step.Name)
+		var argoTaskName string
+		if safe == "" || safe == "step" {
+			argoTaskName = fmt.Sprintf("s%d", i)
+		} else {
+			argoTaskName = fmt.Sprintf("s%d-%s", i, safe)
 		}
+		stepNameMap[step.Name] = argoTaskName
+	}
 
+	type StepStatus struct {
+		Name      string `json:"name"`
+		Status    string `json:"status"`
+		Duration  string `json:"duration"`
+		StartedAt string `json:"startedAt"`
+		PodName   string `json:"podName"`
+		Image     string `json:"image"`
+	}
+	var steps []StepStatus
+
+	// 5. 首先插入 git-clone 步骤（始终存在）
+	{
+		ni := nodeStatusMap["git-clone"]
+		startedAtStr := ""
+		durationStr := ""
+		if !ni.StartedAt.IsZero() {
+			startedAtStr = ni.StartedAt.Local().Format("2006-01-02 15:04:05")
+			if !ni.FinishedAt.IsZero() {
+				durationStr = ni.FinishedAt.Sub(ni.StartedAt).String()
+			} else {
+				durationStr = time.Since(ni.StartedAt).Round(time.Second).String()
+			}
+		}
+		gitCloneStatus := ni.Status
+		if gitCloneStatus == "" {
+			gitCloneStatus = "Pending"
+		}
 		steps = append(steps, StepStatus{
-			Name:     defStep.Name,
-			Status:   status,
-			Duration: duration,
-			PodName:  podName,
-			Image:    defStep.Image,
+			Name:      "git-clone",
+			Status:    gitCloneStatus,
+			Duration:  durationStr,
+			StartedAt: startedAtStr,
+			PodName:   ni.PodName,
+			Image:     "alpine/git:latest",
+		})
+	}
+
+	// 6. 用户定义步骤，通过 stepNameMap 查 Argo task 名
+	for _, defStep := range definedSteps {
+		argoTaskName := stepNameMap[defStep.Name]
+		ni := nodeStatusMap[argoTaskName]
+
+		status := ni.Status
+		if status == "" {
+			status = "Pending"
+		}
+		startedAtStr := ""
+		durationStr := ""
+		if !ni.StartedAt.IsZero() {
+			startedAtStr = ni.StartedAt.Local().Format("2006-01-02 15:04:05")
+			if !ni.FinishedAt.IsZero() {
+				durationStr = ni.FinishedAt.Sub(ni.StartedAt).String()
+			} else {
+				durationStr = time.Since(ni.StartedAt).Round(time.Second).String()
+			}
+		}
+		steps = append(steps, StepStatus{
+			Name:      defStep.Name,
+			Status:    status,
+			Duration:  durationStr,
+			StartedAt: startedAtStr,
+			PodName:   ni.PodName,
+			Image:     defStep.Image,
 		})
 	}
 

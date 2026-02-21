@@ -6,6 +6,7 @@ import (
 	"devops-console-backend/pkg/configs"
 	"devops-console-backend/pkg/utils"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/argoproj/argo-workflows/v3/pkg/client/clientset/versioned"
 	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -52,16 +54,67 @@ func (c *ArgoController) ExecutePipeline(ctx *gin.Context) {
 	// 2. 组装 Argo Workflow 模版
 	var tasks []wfv1.DAGTask
 	var templates []wfv1.Template
-	for _, step := range steps {
-		template := createArgoWorkflowTemplate(step)
-		templates = append(templates, template)
-		// 生成任务
-		task := wfv1.DAGTask{
-			Name:     strings.TrimSpace(step.Name),
-			Template: template.Name,
+
+	// 2.1. 自动插入 git-clone 作为第一步
+	branch := "master"
+	if pipelineInfo.Branch != nil && *pipelineInfo.Branch != "" {
+		branch = *pipelineInfo.Branch
+	}
+	var gitToken string
+	if pipelineInfo.GitToken != nil {
+		gitToken = *pipelineInfo.GitToken
+	}
+	gitCloneTemplate := createGitCloneTemplate(pipelineInfo.GitURL, branch, gitToken)
+	templates = append(templates, gitCloneTemplate)
+	gitCloneTask := wfv1.DAGTask{
+		Name:     "git-clone",
+		Template: gitCloneTemplate.Name,
+	}
+	tasks = append(tasks, gitCloneTask)
+
+	// 2.2. 先建立 原始步骤名 → Argo 合法 taskName 的映射，用索引保证唯一
+	nameMap := make(map[string]string, len(steps))
+	for i, step := range steps {
+		safe := sanitizeArgoName(step.Name)
+		var argoTaskName string
+		if safe == "" || safe == "step" {
+			argoTaskName = fmt.Sprintf("s%d", i)
+		} else {
+			argoTaskName = fmt.Sprintf("s%d-%s", i, safe)
 		}
-		if step.DependsOn != nil {
-			task.Depends = *step.DependsOn
+		nameMap[step.Name] = argoTaskName
+	}
+
+	// 2.3. 用户定义步骤
+	for _, step := range steps {
+		argoTaskName := nameMap[step.Name]
+		templateName := "tpl-" + argoTaskName
+		template := createArgoWorkflowTemplateNamed(step, templateName)
+		templates = append(templates, template)
+
+		task := wfv1.DAGTask{
+			Name:     argoTaskName,
+			Template: templateName,
+		}
+		if step.DependsOn != nil && *step.DependsOn != "" {
+			// 将 dependsOn 中每个原始名称查映射表，找到对应 argoTaskName
+			var depNames []string
+			for _, dep := range strings.Split(*step.DependsOn, ",") {
+				dep = strings.TrimSpace(dep)
+				if dep == "" {
+					continue
+				}
+				if mappedName, ok := nameMap[dep]; ok {
+					depNames = append(depNames, mappedName)
+				}
+			}
+			if len(depNames) > 0 {
+				task.Depends = "git-clone && (" + strings.Join(depNames, " && ") + ")"
+			} else {
+				task.Depends = "git-clone"
+			}
+		} else {
+			task.Depends = "git-clone"
 		}
 		tasks = append(tasks, task)
 	}
@@ -89,7 +142,7 @@ func (c *ArgoController) ExecutePipeline(ctx *gin.Context) {
 		status = "Pending"
 	}
 
-	// Handle time fields to avoid zero date DB error
+	// 处理时间字段以避免零日期数据库错误
 	var startTime *time.Time
 	var endTime *time.Time
 	var duration *uint32
@@ -127,28 +180,80 @@ func (c *ArgoController) ExecutePipeline(ctx *gin.Context) {
 	}
 	helper.SuccessWithData("success", "data", pipelineRun)
 }
-
-func createArgoWorkflowTemplate(step *model.PipelineStep) wfv1.Template {
-	templateName := fmt.Sprintf("%v%v", "temple-", strings.TrimSpace(step.Name))
+func createGitCloneTemplate(gitURL, branch, gitToken string) wfv1.Template {
+	// 如果有 token，将其注入到 HTTPS URL 中，格式: https://token@github.com/...
+	cloneURL := gitURL
+	if gitToken != "" && strings.HasPrefix(gitURL, "https://") {
+		cloneURL = "https://" + gitToken + "@" + strings.TrimPrefix(gitURL, "https://")
+	}
+	cloneCmd := fmt.Sprintf("git -c http.version=HTTP/1.1 clone --depth 1 --branch %s '%s' %s && echo 'clone done'", branch, cloneURL, WorkDir)
 	return wfv1.Template{
-		Name: templateName,
+		Name: "git-clone",
 		Container: &corev1.Container{
-			Image:   strings.TrimSpace(step.Image),
+			Image:   "alpine/git:latest",
 			Command: []string{"sh", "-c"},
-			Args:    []string{step.Commands},
+			Args:    []string{cloneCmd},
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      "workdir",
 					MountPath: WorkDir,
 				},
 			},
-			WorkingDir: WorkDir,
+		},
+	}
+}
+
+func createArgoWorkflowTemplateNamed(step *model.PipelineStep, templateName string) wfv1.Template {
+	image := strings.TrimSpace(step.Image)
+
+	// 共用 workspace 挂载
+	workdirMount := corev1.VolumeMount{
+		Name:      "workdir",
+		MountPath: WorkDir,
+	}
+
+	// ── Kaniko 镜像构建（默认没有 shell，直接传参数） ────────────────────────────────
+	// 用户在命令框中每行写一个参数，如 --destination=xxx
+	if strings.Contains(image, "kaniko-project/executor") || strings.Contains(image, "kaniko/executor") {
+		var args []string
+		for _, line := range strings.Split(step.Commands, "\n") {
+			line = strings.TrimSpace(line)
+			if line != "" && !strings.HasPrefix(line, "#") {
+				args = append(args, line)
+			}
+		}
+		return wfv1.Template{
+			Name: templateName,
+			Container: &corev1.Container{
+				Image:   image,
+				Command: []string{"/kaniko/executor"},
+				Args:    args,
+				VolumeMounts: []corev1.VolumeMount{
+					workdirMount,
+					// 挂载 registry 凭证 secret 为 kaniko 可识别的 config.json
+					{
+						Name:      "docker-config",
+						MountPath: "/kaniko/.docker",
+					},
+				},
+			},
+		}
+	}
+
+	// ── 默认：sh -c 模式（编译/kubectl/自定义 shell 命令） ───────────────────────────────────
+	return wfv1.Template{
+		Name: templateName,
+		Container: &corev1.Container{
+			Image:        image,
+			Command:      []string{"sh", "-c"},
+			Args:         []string{step.Commands},
+			WorkingDir:   WorkDir,
+			VolumeMounts: []corev1.VolumeMount{workdirMount},
 		},
 	}
 }
 
 func createArgoWorkflow(pipeline *model.Pipeline, tasks []wfv1.DAGTask, templates []wfv1.Template) *wfv1.Workflow {
-	// 将后续步骤加入到主模版
 	mainTemplate := wfv1.Template{
 		Name: "main",
 		DAG: &wfv1.DAGTemplate{
@@ -157,22 +262,74 @@ func createArgoWorkflow(pipeline *model.Pipeline, tasks []wfv1.DAGTask, template
 	}
 	allTemplates := append([]wfv1.Template{mainTemplate}, templates...)
 
+	// 使用 VolumeClaimTemplates 替代 EmptyDir
+	// Argo 为每次 Workflow 运行创建一个独立 PVC，所有 Pod 共享，git-clone 的代码才能传递给后续步骤
+	storageRequest, _ := resource.ParseQuantity("1Gi")
+
 	return &wfv1.Workflow{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%v-", pipeline.Name),
-			Labels:       map[string]string{"app": pipeline.Name},
+			// GenerateName 也要净化，避免中文 pipeline 名称导致 Workflow 创建失败
+			GenerateName: sanitizeArgoName(pipeline.Name) + "-",
+			Labels:       map[string]string{"app": sanitizeArgoName(pipeline.Name)},
 		},
 		Spec: wfv1.WorkflowSpec{
 			Entrypoint: "main",
 			Templates:  allTemplates,
+			// ServiceAccountName: argo 服务账号通常拥有足够权限操作集群资源
+			ServiceAccountName: "argo",
+			// 全局额外卷：docker-config 用于 Kaniko 镜像推送
 			Volumes: []corev1.Volume{
 				{
-					Name: "workdir",
+					Name: "docker-config",
 					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{},
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: "registry-creds",
+							Items: []corev1.KeyToPath{
+								{
+									Key:  ".dockerconfigjson",
+									Path: "config.json",
+								},
+							},
+						},
+					},
+				},
+			},
+			// 每次 Workflow 自动创建 1Gi PVC，跨 Pod 共享
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "workdir",
+					},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						AccessModes: []corev1.PersistentVolumeAccessMode{
+							corev1.ReadWriteOnce,
+						},
+						Resources: corev1.VolumeResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceStorage: storageRequest,
+							},
+						},
 					},
 				},
 			},
 		},
 	}
+}
+
+// sanitizeArgoName 将字符串转换为 Argo 合法名称（只含小写字母/数字/连字符，以字母或数字开头）
+var argoInvalidRe = regexp.MustCompile(`[^a-z0-9-]`)
+var argoMultiHyphenRe = regexp.MustCompile(`-{2,}`)
+
+func sanitizeArgoName(name string) string {
+	name = strings.ToLower(strings.TrimSpace(name))
+	// 非法字符替换为连字符
+	name = argoInvalidRe.ReplaceAllString(name, "-")
+	// 折叠多个连续连字符
+	name = argoMultiHyphenRe.ReplaceAllString(name, "-")
+	// 去除首尾连字符
+	name = strings.Trim(name, "-")
+	if name == "" {
+		name = "step"
+	}
+	return name
 }

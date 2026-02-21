@@ -36,9 +36,18 @@ func (p *PipelineRunMapper) DeletePipelineRun(id uint64) error {
 	_, err := p.query.PipelineRun.WithContext(context.Background()).Where(p.query.PipelineRun.ID.Eq(id)).Delete()
 	return err
 }
-func (p *PipelineRunMapper) GetPagePipelineRuns(pageNum int, pageSize int) ([]*model.PipelineRun, int64, error) {
-	info, err := p.query.PipelineRun.WithContext(context.Background()).Limit(pageSize).Offset((pageNum - 1) * pageSize).Find()
-	count, err := p.query.PipelineRun.Count()
+func (p *PipelineRunMapper) GetPagePipelineRuns(pageNum int, pageSize int, pipelineId uint64) ([]*model.PipelineRun, int64, error) {
+	q := p.query.PipelineRun.WithContext(context.Background())
+	cq := p.query.PipelineRun.WithContext(context.Background())
+	if pipelineId > 0 {
+		q = q.Where(p.query.PipelineRun.PipelineID.Eq(uint32(pipelineId)))
+		cq = cq.Where(p.query.PipelineRun.PipelineID.Eq(uint32(pipelineId)))
+	}
+	info, err := q.Order(p.query.PipelineRun.ID.Desc()).Limit(pageSize).Offset((pageNum - 1) * pageSize).Find()
+	if err != nil {
+		return nil, 0, err
+	}
+	count, err := cq.Count()
 	return info, count, err
 }
 
