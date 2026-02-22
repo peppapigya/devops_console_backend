@@ -10,7 +10,7 @@ RUN apk --no-cache add ca-certificates tzdata
 WORKDIR /app
 
 COPY devops .
-COPY configs/ ./configs/
+COPY config/ ./config/
 
 # 暴露端口
 EXPOSE 8081
