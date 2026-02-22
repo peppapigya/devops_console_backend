@@ -5,6 +5,7 @@ import (
 	"devops-console-backend/internal/dal/model"
 	"devops-console-backend/pkg/configs"
 	"devops-console-backend/pkg/utils"
+	"devops-console-backend/pkg/utils/gitutil"
 	"fmt"
 	"regexp"
 	"strings"
@@ -19,7 +20,10 @@ import (
 )
 
 var (
-	WorkDir = "/workspace"
+	WorkDir              = "/workspace"
+	GitCloneTemplateName = "git-clone"
+	PVCSize              = "1Gi"
+	GitRepoPath          = "./"
 )
 
 type ArgoController struct {
@@ -67,7 +71,7 @@ func (c *ArgoController) ExecutePipeline(ctx *gin.Context) {
 	gitCloneTemplate := createGitCloneTemplate(pipelineInfo.GitURL, branch, gitToken)
 	templates = append(templates, gitCloneTemplate)
 	gitCloneTask := wfv1.DAGTask{
-		Name:     "git-clone",
+		Name:     GitCloneTemplateName,
 		Template: gitCloneTemplate.Name,
 	}
 	tasks = append(tasks, gitCloneTask)
@@ -109,12 +113,12 @@ func (c *ArgoController) ExecutePipeline(ctx *gin.Context) {
 				}
 			}
 			if len(depNames) > 0 {
-				task.Depends = "git-clone && (" + strings.Join(depNames, " && ") + ")"
+				task.Depends = GitCloneTemplateName + " && (" + strings.Join(depNames, " && ") + ")"
 			} else {
-				task.Depends = "git-clone"
+				task.Depends = GitCloneTemplateName
 			}
 		} else {
-			task.Depends = "git-clone"
+			task.Depends = GitCloneTemplateName
 		}
 		tasks = append(tasks, task)
 	}
@@ -160,6 +164,11 @@ func (c *ArgoController) ExecutePipeline(ctx *gin.Context) {
 		d := uint32(endTime.Sub(*startTime).Seconds())
 		duration = &d
 	}
+	commitId, err := gitutil.GetCommitID(GitRepoPath, *pipelineInfo.Branch)
+	if err != nil {
+		helper.InternalError("获取Git提交ID失败: " + err.Error())
+		return
+	}
 
 	// 记录记录表
 	pipelineRun := &model.PipelineRun{
@@ -168,7 +177,7 @@ func (c *ArgoController) ExecutePipeline(ctx *gin.Context) {
 		Status:       &status,
 		Operator:     utils.GetUserNameFromContext(ctx),
 		Branch:       pipelineInfo.Branch,
-		CommitID:     nil, // TODO: Get commit ID from git
+		CommitID:     &commitId,
 		StartTime:    startTime,
 		EndTime:      endTime,
 		Duration:     duration,
@@ -188,7 +197,7 @@ func createGitCloneTemplate(gitURL, branch, gitToken string) wfv1.Template {
 	}
 	cloneCmd := fmt.Sprintf("git -c http.version=HTTP/1.1 clone --depth 1 --branch %s '%s' %s && echo 'clone done'", branch, cloneURL, WorkDir)
 	return wfv1.Template{
-		Name: "git-clone",
+		Name: GitCloneTemplateName,
 		Container: &corev1.Container{
 			Image:   "alpine/git:latest",
 			Command: []string{"sh", "-c"},
@@ -212,7 +221,7 @@ func createArgoWorkflowTemplateNamed(step *model.PipelineStep, templateName stri
 		MountPath: WorkDir,
 	}
 
-	// ── Kaniko 镜像构建（默认没有 shell，直接传参数） ────────────────────────────────
+	// Kaniko 镜像构建（默认没有 shell，直接传参数
 	// 用户在命令框中每行写一个参数，如 --destination=xxx
 	if strings.Contains(image, "kaniko-project/executor") || strings.Contains(image, "kaniko/executor") {
 		var args []string
@@ -230,7 +239,6 @@ func createArgoWorkflowTemplateNamed(step *model.PipelineStep, templateName stri
 				Args:    args,
 				VolumeMounts: []corev1.VolumeMount{
 					workdirMount,
-					// 挂载 registry 凭证 secret 为 kaniko 可识别的 config.json
 					{
 						Name:      "docker-config",
 						MountPath: "/kaniko/.docker",
@@ -240,7 +248,7 @@ func createArgoWorkflowTemplateNamed(step *model.PipelineStep, templateName stri
 		}
 	}
 
-	// ── 默认：sh -c 模式（编译/kubectl/自定义 shell 命令） ───────────────────────────────────
+	// ── 默认：sh -c 模式
 	return wfv1.Template{
 		Name: templateName,
 		Container: &corev1.Container{
@@ -262,9 +270,8 @@ func createArgoWorkflow(pipeline *model.Pipeline, tasks []wfv1.DAGTask, template
 	}
 	allTemplates := append([]wfv1.Template{mainTemplate}, templates...)
 
-	// 使用 VolumeClaimTemplates 替代 EmptyDir
 	// Argo 为每次 Workflow 运行创建一个独立 PVC，所有 Pod 共享，git-clone 的代码才能传递给后续步骤
-	storageRequest, _ := resource.ParseQuantity("1Gi")
+	storageRequest, _ := resource.ParseQuantity(PVCSize)
 
 	return &wfv1.Workflow{
 		ObjectMeta: metav1.ObjectMeta{
@@ -316,7 +323,6 @@ func createArgoWorkflow(pipeline *model.Pipeline, tasks []wfv1.DAGTask, template
 	}
 }
 
-// sanitizeArgoName 将字符串转换为 Argo 合法名称（只含小写字母/数字/连字符，以字母或数字开头）
 var argoInvalidRe = regexp.MustCompile(`[^a-z0-9-]`)
 var argoMultiHyphenRe = regexp.MustCompile(`-{2,}`)
 
