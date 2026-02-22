@@ -1,4 +1,4 @@
-FROM alpine:3.20.2
+FROM docker.m.daocloud.io/library/alpine:3.20.2
 
 # 设置时区
 ENV TZ=Asia/Shanghai
