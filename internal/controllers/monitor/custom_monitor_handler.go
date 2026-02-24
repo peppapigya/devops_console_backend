@@ -14,7 +14,7 @@ func ListCustomMonitors(c *gin.Context) {
 	accountID := utils.GetUserIdFromContext(c)
 	helper := utils.NewResponseHelper(c)
 	if accountID == 0 {
-		helper.Error(http.StatusUnauthorized, "Unauthorized")
+		helper.Error(http.StatusUnauthorized, "未授权")
 		return
 	}
 
