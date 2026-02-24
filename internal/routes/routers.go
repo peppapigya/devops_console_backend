@@ -11,6 +11,7 @@ import (
 	"devops-console-backend/internal/routes/es/shard"
 	"devops-console-backend/internal/routes/helm"
 	"devops-console-backend/internal/routes/k8s"
+	"devops-console-backend/internal/routes/monitor"
 	"devops-console-backend/internal/routes/system"
 
 	"github.com/gin-gonic/gin"
@@ -34,6 +35,9 @@ func RegisterRouters(r *gin.Engine, db *gorm.DB) {
 		helmRoute := helm.NewHelmRoute(db)
 		helmRoute.RegisterSubRouter(apiGroup)
 		system.RegisterSystemRouters(apiGroup)
+
+		// 注册监控(Prometheus等)模块路由
+		monitor.RegisterMonitorRouters(apiGroup, db)
 
 		// CiCd 模块
 		cicd.RegisterCiCdRouters(apiGroup)

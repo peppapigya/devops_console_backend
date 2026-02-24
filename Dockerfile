@@ -4,7 +4,7 @@ FROM docker.m.daocloud.io/library/alpine:3.20.2
 ENV TZ=Asia/Shanghai
 
 # 安装ca-certificates和tzdata
-RUN apk --no-cache add ca-certificates tzdata
+#RUN apk --no-cache add ca-certificates tzdata
 
 # 设置工作目录
 WORKDIR /app
