@@ -14,7 +14,7 @@ func GetCommitID(path string, branch string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	head, err := repo.Reference(plumbing.NewBranchReferenceName(branch), true)
+	head, err := repo.Reference(plumbing.NewRemoteHEADReferenceName(branch), true)
 	if err != nil {
 		return "", err
 	}
