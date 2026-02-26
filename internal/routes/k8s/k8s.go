@@ -15,6 +15,7 @@ import (
 	"devops-console-backend/internal/routes/k8s/node"
 	"devops-console-backend/internal/routes/k8s/operator"
 	"devops-console-backend/internal/routes/k8s/pod"
+	"devops-console-backend/internal/routes/k8s/rbac"
 	"devops-console-backend/internal/routes/k8s/replicaset"
 	"devops-console-backend/internal/routes/k8s/replicationcontroller"
 	"devops-console-backend/internal/routes/k8s/service"
@@ -101,4 +102,8 @@ func RegisterK8sRoutes(apiGroup *gin.RouterGroup, db *gorm.DB) {
 	// 注册Operator路由
 	operatorRoute := operator.NewOperatorRoute()
 	operatorRoute.RegisterSubRouter(apiGroup)
+
+	// 注册RBAC路由
+	rbacRoute := rbac.NewRbacRoute()
+	rbacRoute.RegisterSubRouter(apiGroup)
 }
