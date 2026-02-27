@@ -11,7 +11,7 @@
  Target Server Version : 80044 (8.0.44)
  File Encoding         : 65001
 
- Date: 24/02/2026 17:53:46
+ Date: 27/02/2026 16:46:51
 */
 
 SET NAMES utf8mb4;
@@ -96,12 +96,16 @@ CREATE TABLE `custom_monitors`  (
   INDEX `idx_custom_monitor_account`(`account_id` ASC) USING BTREE,
   INDEX `idx_custom_monitor_target`(`target_type` ASC) USING BTREE,
   INDEX `idx_custom_monitors_deleted_at`(`deleted_at` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of custom_monitors
 -- ----------------------------
 INSERT INTO `custom_monitors` VALUES (1, 1, 'pod', 'CPU使用量', 'sum(rate(container_cpu_usage_seconds_total{image!=\"\",pod=\'{{podName}}\'}[1m])) by (pod)', 'line', '%', '#409EFF', '2026-02-23 21:57:03.458', '2026-02-23 21:57:03.458', NULL);
+INSERT INTO `custom_monitors` VALUES (3, 1, 'node', ' CPU 使用率 (%) ', 'min(100 - (avg by(instance) (irate(node_cpu_seconds_total{mode=\"idle\", instance=\"{{nodeName}}\"}[5m])) * 100))\n', 'line', '%', 'rgb(137, 255, 64)', '2026-02-24 19:35:02.154', '2026-02-24 19:49:12.094', NULL);
+INSERT INTO `custom_monitors` VALUES (4, 1, 'node', '内存使用率 (%) ', '(1 - (node_memory_MemAvailable_bytes{instance=\"{{nodeName}}\"} / node_memory_MemTotal_bytes{instance=\"{{nodeName}}\"})) * 100\n', 'line', '%', '#409EFF', '2026-02-24 19:35:35.764', '2026-02-24 19:35:35.764', NULL);
+INSERT INTO `custom_monitors` VALUES (5, 1, 'node', ' 网络接收速率 (B/s)', 'sum(rate(node_network_receive_bytes_total{instance=\"{{nodeName}}\"}[5m]))\n', 'line', 'B/s', '#409EFF', '2026-02-24 19:39:27.483', '2026-02-24 19:39:27.483', NULL);
+INSERT INTO `custom_monitors` VALUES (6, 1, 'node', ' 根目录 (/) 磁盘使用率 (%) ', '100 - (node_filesystem_avail_bytes{mountpoint=\"/var\", instance=\"{{nodeName}}\"} / node_filesystem_size_bytes{mountpoint=\"/var\", instance=\"{{nodeName}}\"} * 100)\n', 'line', '%', '#409EFF', '2026-02-24 19:40:00.818', '2026-02-24 19:58:49.387', NULL);
 
 -- ----------------------------
 -- Table structure for helm_chart
@@ -23431,6 +23435,319 @@ CREATE TABLE `projects`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for sys_department
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_department`;
+CREATE TABLE `sys_department`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `parent_id` bigint UNSIGNED NULL DEFAULT 0 COMMENT '父部门ID，0表示顶级',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '部门名称',
+  `sort` int NULL DEFAULT 0 COMMENT '显示顺序',
+  `leader` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '负责人',
+  `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `status` tinyint UNSIGNED NULL DEFAULT 1 COMMENT '1启用 0停用',
+  `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `created_at` datetime(3) NULL DEFAULT NULL,
+  `updated_at` datetime(3) NULL DEFAULT NULL,
+  `deleted_at` datetime(3) NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_department
+-- ----------------------------
+INSERT INTO `sys_department` VALUES (1, 0, '运维部', 0, 'peppa-pig', '119', NULL, 1, NULL, '2026-02-27 11:49:27.142', '2026-02-27 11:49:43.995', NULL);
+
+-- ----------------------------
+-- Table structure for sys_menu
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_menu`;
+CREATE TABLE `sys_menu`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `parent_id` bigint UNSIGNED NULL DEFAULT 0 COMMENT '父菜单ID',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '菜单名称',
+  `type` tinyint NULL DEFAULT 1 COMMENT '1目录 2菜单 3按钮/接口',
+  `path` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '前端路由路径',
+  `component` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '前端组件路径',
+  `icon` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `perm` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '权限标识，如 system:user:list',
+  `sort` int NULL DEFAULT 0,
+  `visible` tinyint NULL DEFAULT 1 COMMENT '1显示 0隐藏',
+  `status` tinyint UNSIGNED NULL DEFAULT 1,
+  `created_at` datetime(3) NULL DEFAULT NULL,
+  `updated_at` datetime(3) NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 5055 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_menu
+-- ----------------------------
+INSERT INTO `sys_menu` VALUES (1, 0, '首页', 2, '/', 'Dashboard', 'House', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (100, 0, 'Kubernetes', 1, '', '', 'Box', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (101, 100, 'K8s 概览', 2, '/k8s', 'k8s/K8sDashboard', 'DataBoard', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (110, 100, '集群管理', 1, '', '', 'Connection', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (111, 110, '节点管理', 2, '/k8s/node', 'k8s/NodeManagement', 'Monitor', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (112, 110, '命名空间', 2, '/k8s/namespace', 'k8s/NamespaceManagement', 'Folder', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (120, 100, '工作负载', 1, '', '', 'Files', NULL, 30, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (121, 120, 'Pod 管理', 2, '/k8s/pod', 'k8s/PodManagement', 'Box', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (122, 120, 'Deployments', 2, '/k8s/deployment', 'k8s/DeploymentManagement', 'Files', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (123, 120, 'ReplicaSets', 2, '/k8s/replicaset', 'k8s/ReplicaSetManagement', 'CopyDocument', NULL, 30, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (124, 120, 'DaemonSets', 2, '/k8s/daemonset', 'k8s/DaemonSetManagement', 'Operation', NULL, 40, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (125, 120, 'Jobs', 2, '/k8s/job', 'k8s/JobManagement', 'List', NULL, 50, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (126, 120, 'CronJobs', 2, '/k8s/cronjob', 'k8s/CronJobManagement', 'Timer', NULL, 60, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (130, 100, '弹性伸缩', 1, '', '', 'TrendCharts', NULL, 40, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (131, 130, 'HPA', 2, '/k8s/hpa', 'k8s/HpaManagement', 'Right', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (132, 130, 'VPA', 2, '/k8s/vpa', 'k8s/VpaManagement', 'Top', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (140, 100, '存储管理', 1, '', '', 'Coin', NULL, 50, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (141, 140, 'PV', 2, '/k8s/pv', 'k8s/PvManagement', 'Coin', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (142, 140, 'PVC', 2, '/k8s/pvc', 'k8s/PvcManagement', 'Ticket', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (143, 140, 'StorageClass', 2, '/k8s/storageclass', 'k8s/StorageClassManagement', 'Box', NULL, 30, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (150, 100, '服务发现', 1, '', '', 'Share', NULL, 60, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (151, 150, 'Services', 2, '/k8s/service', 'k8s/ServiceManagement', 'Connection', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (152, 150, 'Ingress', 2, '/k8s/ingress', 'k8s/IngressManagement', 'Share', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (160, 100, '配置管理', 1, '', '', 'Document', NULL, 70, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (161, 160, 'ConfigMap', 2, '/k8s/configmap', 'k8s/ConfigMapManagement', 'Document', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (162, 160, 'Secret', 2, '/k8s/secret', 'k8s/SecretManagement', 'Key', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (170, 100, '权限管理', 1, '', '', 'Lock', NULL, 80, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (171, 170, 'Role', 2, '/k8s/role', 'k8s/RoleManagement', 'Lock', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (172, 170, 'ClusterRole', 2, '/k8s/clusterrole', 'k8s/ClusterRoleManagement', 'Lock', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (173, 170, 'RoleBinding', 2, '/k8s/rolebinding', 'k8s/RoleBindingManagement', 'Connection', NULL, 30, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (174, 170, 'ClusterRoleBinding', 2, '/k8s/clusterrolebinding', 'k8s/ClusterRoleBindingManagement', 'Connection', NULL, 40, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (180, 100, '事件管理', 2, '/k8s/event', 'k8s/EventManagement', 'BellFilled', NULL, 90, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (190, 100, '扩展中心', 1, '', '', 'Cpu', NULL, 100, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (191, 190, 'CRD', 2, '/k8s/crd', 'k8s/CrdManagement', 'Cpu', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (192, 190, 'Operators', 2, '/k8s/operator', 'k8s/OperatorManagement', 'Box', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (200, 100, 'Helm 商店', 1, '', '', 'ShoppingCart', NULL, 110, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (201, 200, 'Helm 仓库', 2, '/helm/repos', 'helm/RepoManagement', 'FolderOpened', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (202, 200, '应用商店', 2, '/helm/store', 'helm/AppStore', 'ShoppingCart', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (203, 200, '已安装', 2, '/helm/installed', 'helm/InstalledApps', 'Histogram', NULL, 30, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (300, 0, 'Elasticsearch', 1, '', '', 'DataLine', NULL, 30, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (301, 300, 'ES 控制台', 2, '/es', 'es/EsDashboard', 'Monitor', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (310, 300, '集群管理', 1, '', '', 'Connection', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (311, 310, '节点管理', 2, '/nodes', 'es/NodeManagement', 'Connection', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (312, 310, '分片管理', 2, '/shards', 'es/ShardManagement', 'Grid', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (320, 300, '数据管理', 1, '', '', 'DataBoard', NULL, 30, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (321, 320, '索引管理', 2, '/indices', 'es/IndexManagement', 'DocumentCopy', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (322, 320, '数据查询', 2, '/data', 'es/DataManagement', 'Search', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (323, 320, '备份管理', 2, '/backup', 'es/BackupManagement', 'FolderOpened', NULL, 30, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (400, 0, 'CI/CD 流水线', 2, '/cicd/pipelines', 'cicd/PipelineList', 'Cpu', NULL, 40, 1, 1, NULL, '2026-02-27 16:01:10.597');
+INSERT INTO `sys_menu` VALUES (500, 0, '系统管理', 1, '', '', 'Setting', NULL, 50, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (501, 500, '用户管理', 2, '/system/users', 'system/UserManagement', 'User', NULL, 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (502, 500, '部门管理', 2, '/system/depts', 'system/DeptManagement', 'OfficeBuilding', NULL, 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (503, 500, '岗位管理', 2, '/system/positions', 'system/PositionManagement', 'Briefcase', NULL, 30, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (504, 500, '角色管理', 2, '/system/roles', 'system/RoleManagement', 'UserFilled', NULL, 40, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (505, 500, '菜单管理', 2, '/system/menus', 'system/MenuManagement', 'Menu', NULL, 50, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5011, 501, '用户查询', 3, NULL, NULL, NULL, 'sys:user:list', 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5012, 501, '新增用户', 3, NULL, NULL, NULL, 'sys:user:add', 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5013, 501, '编辑用户', 3, NULL, NULL, NULL, 'sys:user:edit', 30, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5014, 501, '删除用户', 3, NULL, NULL, NULL, 'sys:user:del', 40, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5015, 501, '重置密码', 3, NULL, NULL, NULL, 'sys:user:resetpwd', 50, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5016, 501, '变更状态', 3, NULL, NULL, NULL, 'sys:user:status', 60, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5021, 502, '部门查询', 3, NULL, NULL, NULL, 'sys:dept:list', 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5022, 502, '新增部门', 3, NULL, NULL, NULL, 'sys:dept:add', 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5023, 502, '编辑部门', 3, NULL, NULL, NULL, 'sys:dept:edit', 30, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5024, 502, '删除部门', 3, NULL, NULL, NULL, 'sys:dept:del', 40, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5031, 503, '岗位查询', 3, NULL, NULL, NULL, 'sys:pos:list', 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5032, 503, '新增岗位', 3, NULL, NULL, NULL, 'sys:pos:add', 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5033, 503, '编辑岗位', 3, NULL, NULL, NULL, 'sys:pos:edit', 30, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5034, 503, '删除岗位', 3, NULL, NULL, NULL, 'sys:pos:del', 40, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5041, 504, '角色查询', 3, NULL, NULL, NULL, 'sys:role:list', 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5042, 504, '新增角色', 3, NULL, NULL, NULL, 'sys:role:add', 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5043, 504, '编辑角色', 3, NULL, NULL, NULL, 'sys:role:edit', 30, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5044, 504, '删除角色', 3, NULL, NULL, NULL, 'sys:role:del', 40, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5045, 504, '分配权限', 3, NULL, NULL, NULL, 'sys:role:perm', 50, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5051, 505, '菜单查询', 3, NULL, NULL, NULL, 'sys:menu:list', 10, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5052, 505, '新增菜单', 3, NULL, NULL, NULL, 'sys:menu:add', 20, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5053, 505, '编辑菜单', 3, NULL, NULL, NULL, 'sys:menu:edit', 30, 1, 1, NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5054, 505, '删除菜单', 3, NULL, NULL, NULL, 'sys:menu:del', 40, 1, 1, NULL, NULL);
+
+-- ----------------------------
+-- Table structure for sys_position
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_position`;
+CREATE TABLE `sys_position`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '岗位名称',
+  `code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '岗位编码',
+  `sort` int NULL DEFAULT 0,
+  `status` tinyint UNSIGNED NULL DEFAULT 1,
+  `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `created_at` datetime(3) NULL DEFAULT NULL,
+  `updated_at` datetime(3) NULL DEFAULT NULL,
+  `deleted_at` datetime(3) NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `code`(`code` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_position
+-- ----------------------------
+INSERT INTO `sys_position` VALUES (1, '运维开发岗位', 'SRE', 0, 1, NULL, '2026-02-27 11:50:23.521', '2026-02-27 11:50:35.278', NULL);
+
+-- ----------------------------
+-- Table structure for sys_role
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_role`;
+CREATE TABLE `sys_role`  (
+  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '角色名称',
+  `code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '角色编码，如 admin/operator',
+  `sort` int NULL DEFAULT 0,
+  `status` tinyint UNSIGNED NULL DEFAULT 1,
+  `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `created_at` datetime(3) NULL DEFAULT NULL,
+  `updated_at` datetime(3) NULL DEFAULT NULL,
+  `deleted_at` datetime(3) NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `code`(`code` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_role
+-- ----------------------------
+INSERT INTO `sys_role` VALUES (1, '超级管理员', 'admin', 1, 1, '拥有所有权限', '2026-02-27 11:14:29.897', '2026-02-27 11:14:29.897', NULL);
+INSERT INTO `sys_role` VALUES (2, '测试角色', 'test', 2, 1, '测试专用', '2026-02-27 11:52:06.746', '2026-02-27 11:52:24.608', NULL);
+
+-- ----------------------------
+-- Table structure for sys_role_menu
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_role_menu`;
+CREATE TABLE `sys_role_menu`  (
+  `role_id` bigint UNSIGNED NOT NULL,
+  `menu_id` bigint UNSIGNED NOT NULL,
+  PRIMARY KEY (`role_id`, `menu_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_role_menu
+-- ----------------------------
+INSERT INTO `sys_role_menu` VALUES (1, 1);
+INSERT INTO `sys_role_menu` VALUES (1, 100);
+INSERT INTO `sys_role_menu` VALUES (1, 101);
+INSERT INTO `sys_role_menu` VALUES (1, 110);
+INSERT INTO `sys_role_menu` VALUES (1, 111);
+INSERT INTO `sys_role_menu` VALUES (1, 112);
+INSERT INTO `sys_role_menu` VALUES (1, 120);
+INSERT INTO `sys_role_menu` VALUES (1, 121);
+INSERT INTO `sys_role_menu` VALUES (1, 122);
+INSERT INTO `sys_role_menu` VALUES (1, 123);
+INSERT INTO `sys_role_menu` VALUES (1, 124);
+INSERT INTO `sys_role_menu` VALUES (1, 125);
+INSERT INTO `sys_role_menu` VALUES (1, 126);
+INSERT INTO `sys_role_menu` VALUES (1, 130);
+INSERT INTO `sys_role_menu` VALUES (1, 131);
+INSERT INTO `sys_role_menu` VALUES (1, 132);
+INSERT INTO `sys_role_menu` VALUES (1, 140);
+INSERT INTO `sys_role_menu` VALUES (1, 141);
+INSERT INTO `sys_role_menu` VALUES (1, 142);
+INSERT INTO `sys_role_menu` VALUES (1, 143);
+INSERT INTO `sys_role_menu` VALUES (1, 150);
+INSERT INTO `sys_role_menu` VALUES (1, 151);
+INSERT INTO `sys_role_menu` VALUES (1, 152);
+INSERT INTO `sys_role_menu` VALUES (1, 160);
+INSERT INTO `sys_role_menu` VALUES (1, 161);
+INSERT INTO `sys_role_menu` VALUES (1, 162);
+INSERT INTO `sys_role_menu` VALUES (1, 170);
+INSERT INTO `sys_role_menu` VALUES (1, 171);
+INSERT INTO `sys_role_menu` VALUES (1, 172);
+INSERT INTO `sys_role_menu` VALUES (1, 173);
+INSERT INTO `sys_role_menu` VALUES (1, 174);
+INSERT INTO `sys_role_menu` VALUES (1, 180);
+INSERT INTO `sys_role_menu` VALUES (1, 190);
+INSERT INTO `sys_role_menu` VALUES (1, 191);
+INSERT INTO `sys_role_menu` VALUES (1, 192);
+INSERT INTO `sys_role_menu` VALUES (1, 200);
+INSERT INTO `sys_role_menu` VALUES (1, 201);
+INSERT INTO `sys_role_menu` VALUES (1, 202);
+INSERT INTO `sys_role_menu` VALUES (1, 203);
+INSERT INTO `sys_role_menu` VALUES (1, 300);
+INSERT INTO `sys_role_menu` VALUES (1, 301);
+INSERT INTO `sys_role_menu` VALUES (1, 310);
+INSERT INTO `sys_role_menu` VALUES (1, 311);
+INSERT INTO `sys_role_menu` VALUES (1, 312);
+INSERT INTO `sys_role_menu` VALUES (1, 320);
+INSERT INTO `sys_role_menu` VALUES (1, 321);
+INSERT INTO `sys_role_menu` VALUES (1, 322);
+INSERT INTO `sys_role_menu` VALUES (1, 323);
+INSERT INTO `sys_role_menu` VALUES (1, 400);
+INSERT INTO `sys_role_menu` VALUES (1, 500);
+INSERT INTO `sys_role_menu` VALUES (1, 501);
+INSERT INTO `sys_role_menu` VALUES (1, 502);
+INSERT INTO `sys_role_menu` VALUES (1, 503);
+INSERT INTO `sys_role_menu` VALUES (1, 504);
+INSERT INTO `sys_role_menu` VALUES (1, 505);
+INSERT INTO `sys_role_menu` VALUES (1, 5011);
+INSERT INTO `sys_role_menu` VALUES (1, 5012);
+INSERT INTO `sys_role_menu` VALUES (1, 5013);
+INSERT INTO `sys_role_menu` VALUES (1, 5014);
+INSERT INTO `sys_role_menu` VALUES (1, 5015);
+INSERT INTO `sys_role_menu` VALUES (1, 5016);
+INSERT INTO `sys_role_menu` VALUES (1, 5021);
+INSERT INTO `sys_role_menu` VALUES (1, 5022);
+INSERT INTO `sys_role_menu` VALUES (1, 5023);
+INSERT INTO `sys_role_menu` VALUES (1, 5024);
+INSERT INTO `sys_role_menu` VALUES (1, 5031);
+INSERT INTO `sys_role_menu` VALUES (1, 5032);
+INSERT INTO `sys_role_menu` VALUES (1, 5033);
+INSERT INTO `sys_role_menu` VALUES (1, 5034);
+INSERT INTO `sys_role_menu` VALUES (1, 5041);
+INSERT INTO `sys_role_menu` VALUES (1, 5042);
+INSERT INTO `sys_role_menu` VALUES (1, 5043);
+INSERT INTO `sys_role_menu` VALUES (1, 5044);
+INSERT INTO `sys_role_menu` VALUES (1, 5045);
+INSERT INTO `sys_role_menu` VALUES (1, 5051);
+INSERT INTO `sys_role_menu` VALUES (1, 5052);
+INSERT INTO `sys_role_menu` VALUES (1, 5053);
+INSERT INTO `sys_role_menu` VALUES (1, 5054);
+INSERT INTO `sys_role_menu` VALUES (2, 1);
+INSERT INTO `sys_role_menu` VALUES (2, 100);
+INSERT INTO `sys_role_menu` VALUES (2, 110);
+INSERT INTO `sys_role_menu` VALUES (2, 111);
+INSERT INTO `sys_role_menu` VALUES (2, 112);
+INSERT INTO `sys_role_menu` VALUES (2, 120);
+INSERT INTO `sys_role_menu` VALUES (2, 121);
+INSERT INTO `sys_role_menu` VALUES (2, 122);
+INSERT INTO `sys_role_menu` VALUES (2, 123);
+INSERT INTO `sys_role_menu` VALUES (2, 124);
+INSERT INTO `sys_role_menu` VALUES (2, 125);
+INSERT INTO `sys_role_menu` VALUES (2, 126);
+INSERT INTO `sys_role_menu` VALUES (2, 500);
+INSERT INTO `sys_role_menu` VALUES (2, 501);
+INSERT INTO `sys_role_menu` VALUES (2, 5011);
+
+-- ----------------------------
+-- Table structure for sys_user_position
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_user_position`;
+CREATE TABLE `sys_user_position`  (
+  `user_id` bigint UNSIGNED NOT NULL,
+  `position_id` bigint UNSIGNED NOT NULL,
+  PRIMARY KEY (`user_id`, `position_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_user_position
+-- ----------------------------
+INSERT INTO `sys_user_position` VALUES (2, 1);
+
+-- ----------------------------
+-- Table structure for sys_user_role
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_user_role`;
+CREATE TABLE `sys_user_role`  (
+  `user_id` bigint UNSIGNED NOT NULL,
+  `role_id` bigint UNSIGNED NOT NULL,
+  PRIMARY KEY (`user_id`, `role_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_user_role
+-- ----------------------------
+INSERT INTO `sys_user_role` VALUES (1, 1);
+INSERT INTO `sys_user_role` VALUES (2, 2);
+
+-- ----------------------------
 -- Table structure for system_user_token
 -- ----------------------------
 DROP TABLE IF EXISTS `system_user_token`;
@@ -23445,7 +23762,7 @@ CREATE TABLE `system_user_token`  (
   `deleted_at` datetime NULL DEFAULT NULL COMMENT '删除时间',
   `access_token` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '登录token',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 139 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 157 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of system_user_token
@@ -23579,6 +23896,24 @@ INSERT INTO `system_user_token` VALUES (135, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6Ikp
 INSERT INTO `system_user_token` VALUES (136, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNDUxNjI3LCJuYmYiOjE3NzE4NDY4MjcsImlhdCI6MTc3MTg0NjgyN30.JW2MuSsa8fhBAC2OC_IAjJqiPsgJ_TICJrzDxdGwfns', '2026-02-23 19:40:27', NULL, '2026-02-23 19:40:27', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcxODUwNDI3LCJuYmYiOjE3NzE4NDY4MjcsImlhdCI6MTc3MTg0NjgyN30.akRcuJs1AACDoySat-Nv3kfKvgr2WDRPn0a38Lr-7gA');
 INSERT INTO `system_user_token` VALUES (137, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNDU4ODU1LCJuYmYiOjE3NzE4NTQwNTUsImlhdCI6MTc3MTg1NDA1NX0.yUrs3PAhq169-fkUyok2yDOMo8sRp9ceM3RcfSqSiiM', '2026-02-23 21:40:55', NULL, '2026-02-23 21:40:55', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcxODU3NjU1LCJuYmYiOjE3NzE4NTQwNTUsImlhdCI6MTc3MTg1NDA1NX0.9FjcfI-0JsUheoLP442AFFlkHbZIQ2PghWXXE3UzARs');
 INSERT INTO `system_user_token` VALUES (138, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNDYyNzI1LCJuYmYiOjE3NzE4NTc5MjUsImlhdCI6MTc3MTg1NzkyNX0.738nALBx_D8QwnV2Ugl4U3PqgMKKhlW6NIWlxSJ7lhc', '2026-02-23 22:45:25', NULL, '2026-02-23 22:45:25', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcxODYxNTI1LCJuYmYiOjE3NzE4NTc5MjUsImlhdCI6MTc3MTg1NzkyNX0.xJOUrAgMDdp8DfpV8A3DGLwSoU2CGnicOuduZkwlz5A');
+INSERT INTO `system_user_token` VALUES (139, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNTMyNDA0LCJuYmYiOjE3NzE5Mjc2MDQsImlhdCI6MTc3MTkyNzYwNH0.A2C78lRVBFX2UZH535txpou76qrQhiwwa1sbHdOV0D8', '2026-02-24 18:06:45', NULL, '2026-02-24 18:06:45', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcxOTMxMjA0LCJuYmYiOjE3NzE5Mjc2MDQsImlhdCI6MTc3MTkyNzYwNH0.Zo3W5yrP5TE2AfXRut_qHPN8ZuuBw8GaIP3QXkfZa10');
+INSERT INTO `system_user_token` VALUES (140, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNTM2MTAxLCJuYmYiOjE3NzE5MzEzMDEsImlhdCI6MTc3MTkzMTMwMX0.QLzg0dO0B7wgOX5VMB4Uv47YlgzTc5Ebv2lpVgmmtFI', '2026-02-24 19:08:21', NULL, '2026-02-24 19:08:21', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcxOTM0OTAxLCJuYmYiOjE3NzE5MzEzMDEsImlhdCI6MTc3MTkzMTMwMX0.MhL2twlxTs_-wCRatie9KZ1cBavsNhI7JJtsIHaKNLE');
+INSERT INTO `system_user_token` VALUES (141, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNzI2NzU0LCJuYmYiOjE3NzIxMjE5NTQsImlhdCI6MTc3MjEyMTk1NH0.J2cG9jV3GW_LvG_lRtUkkN_xmQY3UySsnaSt7wDQVYc', '2026-02-27 00:05:55', NULL, '2026-02-27 00:05:54', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcyMTI1NTU0LCJuYmYiOjE3NzIxMjE5NTQsImlhdCI6MTc3MjEyMTk1NH0._sDPelMtoMFNDmfwUdlJ60opuGmfwGIwbxPY5WZPVYA');
+INSERT INTO `system_user_token` VALUES (142, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNzY3NDUyLCJuYmYiOjE3NzIxNjI2NTIsImlhdCI6MTc3MjE2MjY1Mn0.5ngR-jld27XZIjs-oIOPub3N1SKFO9CHuin7nLx_BP0', '2026-02-27 11:24:13', NULL, '2026-02-27 11:24:12', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcyMTY2MjUyLCJuYmYiOjE3NzIxNjI2NTIsImlhdCI6MTc3MjE2MjY1Mn0.dVIlbGDSEI4Ag5zTdDhiBrOHQfNcO8ggjaVO0JrT6vQ');
+INSERT INTO `system_user_token` VALUES (143, 2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MiwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8yIiwiZXhwIjoxNzcyNzY5NDY3LCJuYmYiOjE3NzIxNjQ2NjcsImlhdCI6MTc3MjE2NDY2N30.IE_8Zo1Sj3eVNMZIFDYJoEuaEqNwH_jZCvGkpesakZ4', '2026-02-27 11:57:48', NULL, '2026-02-27 11:57:48', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MiwiVXNlcm5hbWUiOiJ0ZXN0IiwiUm9sZXMiOltdLCJpc3MiOiJrOHMtcGxhdGZvcm0tZ28iLCJleHAiOjE3NzIxNjgyNjcsIm5iZiI6MTc3MjE2NDY2NywiaWF0IjoxNzcyMTY0NjY3fQ.ScuvAQ1wSnpHITpPJTJjI4kcCGbzm5lqqKcr0QOdKIc');
+INSERT INTO `system_user_token` VALUES (144, 2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MiwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8yIiwiZXhwIjoxNzcyNzY5NDc5LCJuYmYiOjE3NzIxNjQ2NzksImlhdCI6MTc3MjE2NDY3OX0.izSrT4pDj9Ov2FvHc1uKG_KNCmJpWCNleBX42jMQj54', '2026-02-27 11:58:00', NULL, '2026-02-27 11:57:59', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MiwiVXNlcm5hbWUiOiJ0ZXN0IiwiUm9sZXMiOltdLCJpc3MiOiJrOHMtcGxhdGZvcm0tZ28iLCJleHAiOjE3NzIxNjgyNzksIm5iZiI6MTc3MjE2NDY3OSwiaWF0IjoxNzcyMTY0Njc5fQ.B6GYnKilrw4QlXrK7n-sBb698XONoCxfPrx7l1i9ZF8');
+INSERT INTO `system_user_token` VALUES (145, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNzY5ODM4LCJuYmYiOjE3NzIxNjUwMzgsImlhdCI6MTc3MjE2NTAzOH0.vghd5b47ubhLVfgHxYeTp73c7UCEX37yiIKrx847PNM', '2026-02-27 12:03:58', NULL, '2026-02-27 12:03:59', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcyMTY4NjM4LCJuYmYiOjE3NzIxNjUwMzgsImlhdCI6MTc3MjE2NTAzOH0.YROEi5numpmAA16SL-gHf5VrYOWq2kR-L9tclThv5Xk');
+INSERT INTO `system_user_token` VALUES (146, 2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MiwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8yIiwiZXhwIjoxNzcyNzY5ODY1LCJuYmYiOjE3NzIxNjUwNjUsImlhdCI6MTc3MjE2NTA2NX0.EvfqwFMNeCSoeuduVY_HCSaE-dMzz8wtQCzopvSl720', '2026-02-27 12:04:25', NULL, '2026-02-27 12:04:25', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MiwiVXNlcm5hbWUiOiJ0ZXN0IiwiUm9sZXMiOltdLCJpc3MiOiJrOHMtcGxhdGZvcm0tZ28iLCJleHAiOjE3NzIxNjg2NjUsIm5iZiI6MTc3MjE2NTA2NSwiaWF0IjoxNzcyMTY1MDY1fQ.ehj1S3S2AdcocCT5y3wAaSqakXYFNo0NmzXzghv1Q5w');
+INSERT INTO `system_user_token` VALUES (147, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNzgwNjgyLCJuYmYiOjE3NzIxNzU4ODIsImlhdCI6MTc3MjE3NTg4Mn0.6doelG26ZfzEXEzckIHW0-j7Z_DVhrZr_JFSULNfAAU', '2026-02-27 15:04:42', NULL, '2026-02-27 15:04:42', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcyMTc5NDgyLCJuYmYiOjE3NzIxNzU4ODIsImlhdCI6MTc3MjE3NTg4Mn0.DLKtIWVVPBylYYwwsMVB87G05z7-6e2KQ9MctsinNuE');
+INSERT INTO `system_user_token` VALUES (148, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNzgwODExLCJuYmYiOjE3NzIxNzYwMTEsImlhdCI6MTc3MjE3NjAxMX0.1MWZRDp_3DXDHHMn2Tnii0EZ-LkZhMyhr7WmCwqx8MY', '2026-02-27 15:06:51', NULL, '2026-02-27 15:06:51', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcyMTc5NjExLCJuYmYiOjE3NzIxNzYwMTEsImlhdCI6MTc3MjE3NjAxMX0.NrV_UGGG15LTd3vs6qw4N-Mw43BcGSmvOuwAvLXA2gE');
+INSERT INTO `system_user_token` VALUES (149, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNzgxNDQxLCJuYmYiOjE3NzIxNzY2NDEsImlhdCI6MTc3MjE3NjY0MX0.sBFiQ6-EyqsK3ivgKas9vttg6JhDMDMwDsqD0o6cDX4', '2026-02-27 15:17:22', NULL, '2026-02-27 15:17:21', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcyMTgwMjQxLCJuYmYiOjE3NzIxNzY2NDEsImlhdCI6MTc3MjE3NjY0MX0.D2aJ2nbdFRUeTLcwNbHAQakCWKc44pfqwGTWedhOSV0');
+INSERT INTO `system_user_token` VALUES (150, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNzgzMzQ5LCJuYmYiOjE3NzIxNzg1NDksImlhdCI6MTc3MjE3ODU0OX0.3v-53jbTWZ0wETBGkHFqv24JgFwsT0WFeMpgV2lwzfU', '2026-02-27 15:49:09', NULL, '2026-02-27 15:49:09', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcyMTgyMTQ5LCJuYmYiOjE3NzIxNzg1NDksImlhdCI6MTc3MjE3ODU0OX0.Z0H3oYKDGuJhaGVnYqSmPfOQaCEoN7TCqwapGIl4JeQ');
+INSERT INTO `system_user_token` VALUES (151, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNzgzOTczLCJuYmYiOjE3NzIxNzkxNzMsImlhdCI6MTc3MjE3OTE3M30.yz6yIRFegQ3KK96Lka0pV1wU9ARrMlX0HZNiRrpo3LU', '2026-02-27 15:59:33', NULL, '2026-02-27 15:59:33', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcyMTgyNzczLCJuYmYiOjE3NzIxNzkxNzMsImlhdCI6MTc3MjE3OTE3M30.ugxIcXB6aUMvOkyRwWJX02yXaT5jJF4ZfBRpb2YUf1o');
+INSERT INTO `system_user_token` VALUES (152, 2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MiwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8yIiwiZXhwIjoxNzcyNzg1OTM1LCJuYmYiOjE3NzIxODExMzUsImlhdCI6MTc3MjE4MTEzNX0.65Zsyl1bjOcpI_qdagllcjFRnd1zOuiCzctnjAPvuIk', '2026-02-27 16:32:16', NULL, '2026-02-27 16:32:15', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MiwiVXNlcm5hbWUiOiJ0ZXN0IiwiUm9sZXMiOltdLCJpc3MiOiJrOHMtcGxhdGZvcm0tZ28iLCJleHAiOjE3NzIxODQ3MzUsIm5iZiI6MTc3MjE4MTEzNSwiaWF0IjoxNzcyMTgxMTM1fQ.Y-BxpCILCyYWdsruSWZrvopObNp3rWMwcT6HoTazdxk');
+INSERT INTO `system_user_token` VALUES (153, 2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MiwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8yIiwiZXhwIjoxNzcyNzg2NDMwLCJuYmYiOjE3NzIxODE2MzAsImlhdCI6MTc3MjE4MTYzMH0.WrBFIw2WZ0VenmJ5A6jzQUrnxktuX1oLmSrXi0TVquw', '2026-02-27 16:40:30', NULL, '2026-02-27 16:40:30', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MiwiVXNlcm5hbWUiOiJ0ZXN0IiwiUm9sZXMiOltdLCJpc3MiOiJrOHMtcGxhdGZvcm0tZ28iLCJleHAiOjE3NzIxODUyMzAsIm5iZiI6MTc3MjE4MTYzMCwiaWF0IjoxNzcyMTgxNjMwfQ.Z-QN0Io0RJzQlesxu_4DkWv-2TCbOlWhcq2Mmj09lO0');
+INSERT INTO `system_user_token` VALUES (154, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNzg2NzEwLCJuYmYiOjE3NzIxODE5MTAsImlhdCI6MTc3MjE4MTkxMH0.ilbV6Vxd-w5mM0bVYjWJq42vA0DRVBbR2TGjxcKvAwQ', '2026-02-27 16:45:10', NULL, '2026-02-27 16:45:10', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcyMTg1NTEwLCJuYmYiOjE3NzIxODE5MTAsImlhdCI6MTc3MjE4MTkxMH0.D0uL3uMZEg-tciIjI_LnHKZIR3ysIx7zXDUyY1zeQSk');
+INSERT INTO `system_user_token` VALUES (155, 2, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MiwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8yIiwiZXhwIjoxNzcyNzg2NzI1LCJuYmYiOjE3NzIxODE5MjUsImlhdCI6MTc3MjE4MTkyNX0.UODH1i0P47s5dxUe9sucP6NDljrS-N4tKh7zz8QRrt4', '2026-02-27 16:45:25', NULL, '2026-02-27 16:45:25', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MiwiVXNlcm5hbWUiOiJ0ZXN0IiwiUm9sZXMiOltdLCJpc3MiOiJrOHMtcGxhdGZvcm0tZ28iLCJleHAiOjE3NzIxODU1MjUsIm5iZiI6MTc3MjE4MTkyNSwiaWF0IjoxNzcyMTgxOTI1fQ.C49dl7Zk5394FaOVsUPpyVBOUlq_vT_2uP11ZsynP-Q');
+INSERT INTO `system_user_token` VALUES (156, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzcyNzg2NzQ4LCJuYmYiOjE3NzIxODE5NDgsImlhdCI6MTc3MjE4MTk0OH0.yGj2-hHZSzV91owIjv8dyFy2y2u7BJ5FU3-5VLzWizM', '2026-02-27 16:45:48', NULL, '2026-02-27 16:45:48', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcyMTg1NTQ4LCJuYmYiOjE3NzIxODE5NDgsImlhdCI6MTc3MjE4MTk0OH0.Y64SwuZd2qvYo6agCTdCebQpfhu7a5_tfKQIjBqz6eQ');
 
 -- ----------------------------
 -- Table structure for system_users
@@ -23593,15 +23928,21 @@ CREATE TABLE `system_users`  (
   `created_at` datetime(3) NULL DEFAULT NULL,
   `updated_at` datetime(3) NULL DEFAULT NULL,
   `deleted_at` datetime(3) NULL DEFAULT NULL,
+  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '邮箱',
+  `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '手机号',
+  `avatar` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '头像',
+  `dept_id` bigint UNSIGNED NULL DEFAULT NULL COMMENT '部门ID',
+  `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '备注',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_account_user_id`(`username` ASC) USING BTREE,
   INDEX `idx_account_deleted_at`(`deleted_at` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of system_users
 -- ----------------------------
-INSERT INTO `system_users` VALUES (1, 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 1, 'admin', '2026-01-24 21:17:21.000', '2026-01-24 21:17:25.000', NULL);
+INSERT INTO `system_users` VALUES (1, 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 1, 'admin', '2026-01-24 21:17:21.000', '2026-01-24 21:17:25.000', NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `system_users` VALUES (2, 'test', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 1, 'test', '2026-02-27 11:57:00.690', '2026-02-27 12:04:14.874', NULL, 'peppapig7030@gmail.com', '110', NULL, 1, '');
 
 -- ----------------------------
 -- View structure for resource_details

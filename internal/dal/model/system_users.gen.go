@@ -14,11 +14,17 @@ const TableNameSystemUser = "system_users"
 
 // SystemUser mapped from table <system_users>
 type SystemUser struct {
-	ID        uint32         `gorm:"column:id;type:int unsigned;primaryKey;autoIncrement:true;comment:主键id" json:"id"` // 主键id
-	Username  string         `gorm:"column:username;type:varchar(191);not null;index:idx_account_user_id,priority:1" json:"username"`
-	Password  string         `gorm:"column:password;type:varchar(191);not null" json:"password"`
-	Status    uint32         `gorm:"column:status;type:tinyint unsigned;not null" json:"status"`
-	Nickname  *string        `gorm:"column:nickname;type:varchar(191)" json:"nickname"`
+	ID       uint32  `gorm:"column:id;type:int unsigned;primaryKey;autoIncrement:true;comment:主键id" json:"id"` // 主键id
+	Username string  `gorm:"column:username;type:varchar(191);not null;index:idx_account_user_id,priority:1" json:"username"`
+	Password string  `gorm:"column:password;type:varchar(191);not null" json:"password"`
+	Status   uint32  `gorm:"column:status;type:tinyint unsigned;not null" json:"status"`
+	Nickname *string `gorm:"column:nickname;type:varchar(191)" json:"nickname"`
+	// 扩展字段
+	Email     *string        `gorm:"column:email;type:varchar(100)" json:"email"`
+	Phone     *string        `gorm:"column:phone;type:varchar(20)" json:"phone"`
+	Avatar    *string        `gorm:"column:avatar;type:varchar(500)" json:"avatar"`
+	DeptID    *uint64        `gorm:"column:dept_id;type:bigint unsigned" json:"deptId"`
+	Remark    *string        `gorm:"column:remark;type:text" json:"remark"`
 	CreatedAt *time.Time     `gorm:"column:created_at;type:datetime(3)" json:"createdAt"`
 	UpdatedAt *time.Time     `gorm:"column:updated_at;type:datetime(3)" json:"updatedAt"`
 	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;type:datetime(3);index:idx_account_deleted_at,priority:1" json:"deletedAt"`
