@@ -2,6 +2,7 @@
 package routers
 
 import (
+	"devops-console-backend/internal/routes/asset"
 	"devops-console-backend/internal/routes/cicd"
 	"devops-console-backend/internal/routes/es/backup"
 	"devops-console-backend/internal/routes/es/elasticsearch"
@@ -38,6 +39,9 @@ func RegisterRouters(r *gin.Engine, db *gorm.DB) {
 
 		// 注册监控(Prometheus等)模块路由
 		monitor.RegisterMonitorRouters(apiGroup, db)
+
+		// 注册资产管理模块路由
+		asset.RegisterAssetRouters(apiGroup, db)
 
 		// CiCd 模块
 		cicd.RegisterCiCdRouters(apiGroup)

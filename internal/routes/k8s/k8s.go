@@ -19,6 +19,7 @@ import (
 	"devops-console-backend/internal/routes/k8s/replicaset"
 	"devops-console-backend/internal/routes/k8s/replicationcontroller"
 	"devops-console-backend/internal/routes/k8s/service"
+	"devops-console-backend/internal/routes/k8s/statefulset"
 	"devops-console-backend/internal/routes/k8s/storage"
 	"devops-console-backend/internal/routes/k8s/vpa"
 
@@ -106,4 +107,8 @@ func RegisterK8sRoutes(apiGroup *gin.RouterGroup, db *gorm.DB) {
 	// 注册RBAC路由
 	rbacRoute := rbac.NewRbacRoute()
 	rbacRoute.RegisterSubRouter(apiGroup)
+
+	// 注册StatefulSet路由
+	statefulSetRoute := statefulset.NewStatefulSetRoute()
+	statefulSetRoute.RegisterSubRouter(apiGroup)
 }

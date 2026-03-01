@@ -91,19 +91,20 @@ const TableNameSysMenu = "sys_menu"
 
 // SysMenu 系统菜单
 type SysMenu struct {
-	ID        uint64     `gorm:"column:id;type:bigint unsigned;primaryKey;autoIncrement" json:"id"`
-	ParentID  uint64     `gorm:"column:parent_id;type:bigint unsigned;not null;default:0;index;comment:父菜单ID" json:"parentId"`
-	Name      string     `gorm:"column:name;type:varchar(100);not null;comment:菜单名称" json:"name"`
-	Type      int8       `gorm:"column:type;not null;default:1;comment:类型1目录2菜单3按钮" json:"type"`
-	Path      *string    `gorm:"column:path;type:varchar(200);comment:前端路由" json:"path"`
-	Component *string    `gorm:"column:component;type:varchar(200);comment:组件路径" json:"component"`
-	Icon      *string    `gorm:"column:icon;type:varchar(50);comment:图标" json:"icon"`
-	Perm      *string    `gorm:"column:perm;type:varchar(200);comment:权限标识" json:"perm"`
-	Sort      int        `gorm:"column:sort;not null;default:0;comment:显示顺序" json:"sort"`
-	Visible   int8       `gorm:"column:visible;not null;default:1;comment:是否显示" json:"visible"`
-	Status    int8       `gorm:"column:status;not null;default:1;comment:状态" json:"status"`
-	CreatedAt *time.Time `gorm:"column:created_at;type:datetime(3)" json:"createdAt"`
-	UpdatedAt *time.Time `gorm:"column:updated_at;type:datetime(3)" json:"updatedAt"`
+	ID        uint64         `gorm:"column:id;type:bigint unsigned;primaryKey;autoIncrement" json:"id"`
+	ParentID  uint64         `gorm:"column:parent_id;type:bigint unsigned;not null;default:0;index;comment:父菜单ID" json:"parentId"`
+	Name      string         `gorm:"column:name;type:varchar(100);not null;comment:菜单名称" json:"name"`
+	Type      int8           `gorm:"column:type;not null;default:1;comment:类型1目录2菜单3按钮" json:"type"`
+	Path      *string        `gorm:"column:path;type:varchar(200);comment:前端路由" json:"path"`
+	Component *string        `gorm:"column:component;type:varchar(200);comment:组件路径" json:"component"`
+	Icon      *string        `gorm:"column:icon;type:varchar(50);comment:图标" json:"icon"`
+	Perm      *string        `gorm:"column:perm;type:varchar(200);comment:权限标识" json:"perm"`
+	Sort      int            `gorm:"column:sort;not null;default:0;comment:显示顺序" json:"sort"`
+	Visible   int8           `gorm:"column:visible;not null;default:1;comment:是否显示" json:"visible"`
+	Status    int8           `gorm:"column:status;not null;default:1;comment:状态" json:"status"`
+	CreatedAt *time.Time     `gorm:"column:created_at;type:datetime(3)" json:"createdAt"`
+	UpdatedAt *time.Time     `gorm:"column:updated_at;type:datetime(3)" json:"updatedAt"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;type:datetime(3);index" json:"-"`
 
 	// 非数据库字段，用于树形结构构建
 	Children []*SysMenu `gorm:"-" json:"children,omitempty"`
