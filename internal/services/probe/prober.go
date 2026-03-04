@@ -11,8 +11,9 @@ type InstanceProbeTYpe string
 
 // 这个要和数据库实例 type 的值相同
 const (
-	PrometheusInstanceProbeType InstanceProbeTYpe = "Prometheus"
-	KubernetesInstanceProbeType InstanceProbeTYpe = "kubernetes"
+	PrometheusInstanceProbeType    InstanceProbeTYpe = "Prometheus"
+	KubernetesInstanceProbeType    InstanceProbeTYpe = "Kubernetes"
+	InstanceProbeTypeElasticsearch InstanceProbeTYpe = "Elasticsearch"
 )
 
 // Prober 是所有探测器的统一接口

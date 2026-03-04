@@ -123,7 +123,7 @@ func createEsClient(instanceDetail dal.ResourceDetail) (*elasticsearch.Client, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to Elasticsearch: %v", err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.IsError() {
 		return nil, fmt.Errorf("failed to get response from Elasticsearch: %v", res.Status())
@@ -145,10 +145,13 @@ func parseAuthConfigs(authConfigsStr string) map[string]dal.AuthConfig {
 	var jsonConfigs map[string]map[string]interface{}
 	if err := json.Unmarshal([]byte(authConfigsStr), &jsonConfigs); err == nil {
 		// JSON格式解析成功
-		for authType, configData := range jsonConfigs {
-			if configValue, ok := configData["config_value"].(string); ok {
-				authConfigs[authType] = dal.AuthConfig{
-					ConfigKey:   authType,
+		for _, configData := range jsonConfigs {
+			if _, ok := configData["config_value"].(string); ok {
+				realAuthType, _ := configData["auth_type"].(string)
+				// 2. 获取对应的配置值
+				configValue, _ := configData["config_value"].(string)
+				authConfigs[realAuthType] = dal.AuthConfig{
+					ConfigKey:   realAuthType,
 					ConfigValue: configValue,
 				}
 			}

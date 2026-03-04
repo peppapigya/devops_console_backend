@@ -16,8 +16,8 @@ import (
 
 // Status 定义探测状态枚举
 const (
-	StatusOnline  = "online"
-	StatusOffline = "offline"
+	StatusOnline  = "online"  // 在线
+	StatusOffline = "offline" // 不在线
 )
 
 // ProbeResult 探测结果结构
@@ -38,7 +38,7 @@ func StartInstanceStatusProbe() {
 	c := cron.New(cron.WithSeconds())
 
 	// 每隔 30 秒执行一次全量探测任务
-	_, err := c.AddFunc("* */60 * * * *", func() {
+	_, err := c.AddFunc("*/120 * * * * *", func() {
 		isProbingLock.Lock()
 		if isProbing {
 			isProbingLock.Unlock()
