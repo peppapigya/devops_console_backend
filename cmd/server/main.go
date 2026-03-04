@@ -25,6 +25,7 @@ import (
 	"devops-console-backend/internal/controllers/monitor"
 	"devops-console-backend/internal/middlewares"
 	"devops-console-backend/internal/routes"
+	"devops-console-backend/internal/services/probe"
 	"devops-console-backend/internal/websocket"
 	"devops-console-backend/pkg/configs"
 	"devops-console-backend/pkg/database"
@@ -66,6 +67,7 @@ func main() {
 	// 初始化 prometheus monitor
 	monitor.InitPrometheus()
 	configs.InitConfig()
+	probe.StartInstanceStatusProbe()
 	// 3. 日志配置
 	logs.Info(nil, "程序启动成功")
 
