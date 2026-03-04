@@ -54,9 +54,6 @@ func InitK8sClients() error {
 	}
 
 	for _, instance := range instances {
-		if instance.Status != "active" {
-			continue
-		}
 
 		// 获取认证配置
 		authConfigs, err := authConfigRepo.GetByInstanceID(instance.ID)
