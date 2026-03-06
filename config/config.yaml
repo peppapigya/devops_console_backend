@@ -65,9 +65,9 @@ health:
   interval: 30  # 检查间隔（秒）
 
 redis:
-  host: 127.0.0.1
-  port: 6379
-  password: "123456"
+  host: 47.104.247.159
+  port: 8001
+  password: "peppa-pig"
   db: 0
 
 jwt:
