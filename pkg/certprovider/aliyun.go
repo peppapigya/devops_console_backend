@@ -1,6 +1,8 @@
 package certprovider
 
 import (
+	"fmt"
+
 	cas "github.com/alibabacloud-go/cas-20200407/v2/client"
 	openapi "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	console "github.com/alibabacloud-go/tea-console/client"
@@ -41,13 +43,37 @@ func (p *AliProvider) SyncCertificate() error {
 }
 
 func (p *AliProvider) UploadCertificate(req UploadCertificateRequest) (int64, error) {
-	return 0, nil
+	client, err := CreateClient(p)
+	if err != nil {
+		return 0, err
+	}
+	request := &cas.UploadUserCertificateRequest{}
+	request.Name = req.Name
+	request.Cert = req.Crt
+	request.Key = req.Key
+	response, err := client.UploadUserCertificate(request)
+	if err != nil {
+		return 0, err
+	}
+	return *response.Body.CertId, nil
 }
 func (p *AliProvider) ApplyCertificate(instanceId string) error {
 	return nil
 }
 
 func (p *AliProvider) DeleteCertificate(certId int64) error {
+	client, err := CreateClient(p)
+	if err != nil {
+		return err
+	}
+
+	response, err := client.DeleteUserCertificate(&cas.DeleteUserCertificateRequest{CertId: tea.Int64(certId)})
+	if err != nil {
+		return err
+	}
+	if *response.StatusCode != 200 {
+		return fmt.Errorf("删除证书失败，错误码为：%v", *response.StatusCode)
+	}
 	return nil
 }
 

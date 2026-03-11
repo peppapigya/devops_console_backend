@@ -5,6 +5,7 @@ import (
 	"devops-console-backend/internal/dal/mapper"
 	"devops-console-backend/internal/dal/model"
 	reqDomain "devops-console-backend/internal/dal/request/domain"
+	"devops-console-backend/pkg/certprovider"
 	"strconv"
 	"time"
 
@@ -80,6 +81,20 @@ func (c *DomainController) CreateDomain(ctx *gin.Context) {
 		CreatedAt:     &now,
 		UpdatedAt:     &now,
 	}
+	if enabled == true {
+		status, err := certprovider.CheckCertificateStatus(req.Domain)
+		if err == nil {
+			d.CertProvider = &status.Issuer
+			d.SslDaysLeft = &status.DaysLeft
+			d.Status = "normal"
+			if status.IsExpired {
+				d.Status = "abnormal"
+			}
+			d.StatusCode = &status.StatueCode
+			d.ResponseTime = &status.Latency
+		}
+	}
+
 	if err := c.domainMapper.Create(d); err != nil {
 		common.FailWithError(ctx, err)
 		return

@@ -25,7 +25,7 @@ type GetCertificateDetailRequest struct {
 	CertFilter bool
 }
 type UploadCertificateRequest struct {
-	Name string // 名字必传
-	Crt  string // 公钥
-	Key  string // 私钥
+	Name *string // 名字必传
+	Crt  *string // 公钥
+	Key  *string // 私钥
 }
