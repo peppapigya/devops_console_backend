@@ -14,6 +14,7 @@ import (
 	"devops-console-backend/internal/routes/k8s"
 	"devops-console-backend/internal/routes/monitor"
 	"devops-console-backend/internal/routes/system"
+	"devops-console-backend/internal/routes/task_scheduler"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -45,5 +46,8 @@ func RegisterRouters(r *gin.Engine, db *gorm.DB) {
 
 		// CiCd 模块
 		cicd.RegisterCiCdRouters(apiGroup)
+
+		// 任务调度模块
+		task_scheduler.RegisterTaskSchedulerRouters(apiGroup, db)
 	}
 }

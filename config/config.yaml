@@ -18,11 +18,16 @@ database:
 #    username: "devops"  # Docker环境中的用户
 #    password: "devops123456"  # Docker环境中的密码
 #    database: "devops_console"
-    host: "47.104.247.159"  # Docker容器中的服务名
-    port: 8002
+#    host: "47.104.247.159"  # Docker容器中的服务名
+#    port: 8002
+#    username: "root"  # Docker环境中的用户
+#    password: "peppa-pig"  # Docker环境中的密码
+#    database: "devops_console"
+    host: "127.0.0.1"  # Docker容器中的服务名
+    port: 3306
     username: "root"  # Docker环境中的用户
-    password: "peppa-pig"  # Docker环境中的密码
-    database: "devops_console"
+    password: "Wjk990921"  # Docker环境中的密码
+    database: "devops"
     charset: "utf8mb4"
     parse_time: true
     max_open_conns: 10

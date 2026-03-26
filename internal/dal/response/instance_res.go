@@ -7,24 +7,24 @@ import (
 
 // InstanceListResponse 集群列表响应结构体
 type InstanceListResponse struct {
-	Page       int                    `json:"page"`        // 当前页码
-	PageSize   int                    `json:"page_size"`   // 每页记录数
-	Total      int64                  `json:"total"`       // 总记录数
-	TotalPages int                    `json:"total_pages"` // 总页数
-	Data       []InstanceItemResponse `json:"data"`        // 数据列表
+	Page       int                    `json:"page"`       // 当前页码
+	PageSize   int                    `json:"pageSize"`   // 每页记录数
+	Total      int64                  `json:"total"`      // 总记录数
+	TotalPages int                    `json:"totalPages"` // 总页数
+	Data       []InstanceItemResponse `json:"data"`       // 数据列表
 }
 
 // InstanceItemResponse 集群项目响应结构体
 type InstanceItemResponse struct {
-	ID           uint      `json:"id"`            // 实例ID（使用uint匹配UNSIGNED INT）
-	InstanceType string    `json:"instance_type"` // 实例类型名称
-	Name         string    `json:"name"`          // 实例名称
-	Address      string    `json:"address"`       // 实例地址
-	HttpsEnabled bool      `json:"https_enabled"` // 是否启用HTTPS
-	Status       string    `json:"status"`        // 实例状态
-	AuthConfigs  string    `json:"auth_configs"`  // 认证配置（键值对拼接的字符串）
-	CreatedAt    time.Time `json:"created_at"`    // 创建时间
-	UpdatedAt    time.Time `json:"updated_at"`    // 更新时间
+	ID           uint      `json:"id"`           // 实例ID（使用uint匹配UNSIGNED INT）
+	InstanceType string    `json:"instanceType"` // 实例类型名称
+	Name         string    `json:"name"`         // 实例名称
+	Address      string    `json:"address"`      // 实例地址
+	HttpsEnabled bool      `json:"httpsEnabled"` // 是否启用HTTPS
+	Status       string    `json:"status"`       // 实例状态
+	AuthConfigs  string    `json:"authConfigs"`  // 认证配置（键值对拼接的字符串）
+	CreatedAt    time.Time `json:"createdAt"`    // 创建时间
+	UpdatedAt    time.Time `json:"updatedAt"`    // 更新时间
 }
 
 // NewInstanceListResponse 创建集群列表响应

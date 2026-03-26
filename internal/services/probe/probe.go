@@ -38,7 +38,7 @@ func StartInstanceStatusProbe() {
 	c := cron.New(cron.WithSeconds())
 
 	// 每隔 30 秒执行一次全量探测任务
-	_, err := c.AddFunc("*/120 * * * * *", func() {
+	_, err := c.AddFunc("0 0 */1 * * *", func() {
 		isProbingLock.Lock()
 		if isProbing {
 			isProbingLock.Unlock()

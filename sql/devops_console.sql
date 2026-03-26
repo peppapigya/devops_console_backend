@@ -1,17 +1,17 @@
 /*
  Navicat Premium Dump SQL
 
- Source Server         : 47.104.247.159
+ Source Server         : localhost
  Source Server Type    : MySQL
- Source Server Version : 80044 (8.0.44)
- Source Host           : 47.104.247.159:8002
- Source Schema         : devops_console
+ Source Server Version : 80012 (8.0.12)
+ Source Host           : localhost:3306
+ Source Schema         : devops
 
  Target Server Type    : MySQL
- Target Server Version : 80044 (8.0.44)
+ Target Server Version : 80012 (8.0.12)
  File Encoding         : 65001
 
- Date: 04/03/2026 20:20:41
+ Date: 26/03/2026 20:23:07
 */
 
 SET NAMES utf8mb4;
@@ -22,8 +22,8 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- ----------------------------
 DROP TABLE IF EXISTS `asset_host_groups`;
 CREATE TABLE `asset_host_groups`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
-  `parent_id` bigint UNSIGNED NOT NULL DEFAULT 0 COMMENT '父分组ID，0表示根',
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `parent_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '父分组ID，0表示根',
   `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '分组名称',
   `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '备注',
   `created_at` datetime(3) NULL DEFAULT NULL COMMENT '创建时间',
@@ -46,11 +46,11 @@ INSERT INTO `asset_host_groups` VALUES (3, 2, '阿里云', '', '2026-02-28 16:48
 -- ----------------------------
 DROP TABLE IF EXISTS `asset_hosts`;
 CREATE TABLE `asset_hosts`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
-  `group_id` bigint UNSIGNED NOT NULL DEFAULT 0 COMMENT '所属分组ID',
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `group_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '所属分组ID',
   `name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '主机名称',
   `ip` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'IP地址',
-  `port` smallint UNSIGNED NOT NULL DEFAULT 22 COMMENT 'SSH端口',
+  `port` smallint(5) UNSIGNED NOT NULL DEFAULT 22 COMMENT 'SSH端口',
   `os_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'linux' COMMENT '系统类型: linux/windows',
   `cloud_provider` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '云厂商: aliyun/tencent/huawei/aws/self',
   `username` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'root' COMMENT 'SSH用户名',
@@ -62,9 +62,9 @@ CREATE TABLE `asset_hosts`  (
   `cpu_usage` decimal(5, 2) NULL DEFAULT NULL COMMENT 'CPU使用率(%)',
   `mem_usage` decimal(5, 2) NULL DEFAULT NULL COMMENT '内存使用率(%)',
   `disk_usage` decimal(5, 2) NULL DEFAULT NULL COMMENT '磁盘使用率(%)',
-  `process_count` int NULL DEFAULT NULL COMMENT '进程数量',
-  `port_count` int NULL DEFAULT NULL COMMENT '端口数量',
-  `tunnel_count` int NULL DEFAULT NULL COMMENT '通道数量',
+  `process_count` int(11) NULL DEFAULT NULL COMMENT '进程数量',
+  `port_count` int(11) NULL DEFAULT NULL COMMENT '端口数量',
+  `tunnel_count` int(11) NULL DEFAULT NULL COMMENT '通道数量',
   `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '备注',
   `created_at` datetime(3) NULL DEFAULT NULL COMMENT '创建时间',
   `updated_at` datetime(3) NULL DEFAULT NULL COMMENT '更新时间',
@@ -85,9 +85,9 @@ INSERT INTO `asset_hosts` VALUES (1, 3, 'aliyun', '47.104.247.159', 22, 'linux',
 -- ----------------------------
 DROP TABLE IF EXISTS `auth_configs`;
 CREATE TABLE `auth_configs`  (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `resource_type` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `resource_id` bigint UNSIGNED NOT NULL,
+  `resource_id` bigint(20) UNSIGNED NOT NULL,
   `resource_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `auth_type` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `config_key` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
@@ -118,11 +118,11 @@ INSERT INTO `auth_configs` VALUES (8, 'instance', 10, 'test-es', 'basic', 'defau
 -- ----------------------------
 DROP TABLE IF EXISTS `connection_tests`;
 CREATE TABLE `connection_tests`  (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `resource_type` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `resource_id` bigint UNSIGNED NOT NULL,
+  `resource_id` bigint(20) UNSIGNED NOT NULL,
   `test_result` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
-  `response_time` bigint NULL DEFAULT NULL,
+  `response_time` bigint(20) NULL DEFAULT NULL,
   `error_message` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
   `tested_at` datetime(3) NULL DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE,
@@ -148,8 +148,8 @@ INSERT INTO `connection_tests` VALUES (12, 'instance', 10, 'success', 40, '', '2
 -- ----------------------------
 DROP TABLE IF EXISTS `custom_monitors`;
 CREATE TABLE `custom_monitors`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `account_id` bigint UNSIGNED NOT NULL,
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `account_id` bigint(20) UNSIGNED NOT NULL,
   `target_type` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `title` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `promql_template` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
@@ -183,8 +183,8 @@ INSERT INTO `custom_monitors` VALUES (10, 2, 'pod', '网络发送速率', 'sum(r
 -- ----------------------------
 DROP TABLE IF EXISTS `helm_chart`;
 CREATE TABLE `helm_chart`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `repo_id` bigint UNSIGNED NOT NULL COMMENT '所属仓库ID',
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `repo_id` bigint(20) UNSIGNED NOT NULL COMMENT '所属仓库ID',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Chart名称',
   `version` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Chart版本',
   `app_version` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '应用版本',
@@ -23264,8 +23264,8 @@ INSERT INTO `helm_chart` VALUES (41845, 4, 'prometheus-opencost-exporter', '0.1.
 -- ----------------------------
 DROP TABLE IF EXISTS `helm_release`;
 CREATE TABLE `helm_release`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `instance_id` bigint UNSIGNED NOT NULL COMMENT 'K8s集群实例ID',
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `instance_id` bigint(20) UNSIGNED NOT NULL COMMENT 'K8s集群实例ID',
   `namespace` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Kubernetes命名空间',
   `release_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'Release名称',
   `chart_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT 'Chart名称',
@@ -23290,7 +23290,7 @@ INSERT INTO `helm_release` VALUES (7, 7, 'traefik', 'traefik', 'traefik', '38.0.
 -- ----------------------------
 DROP TABLE IF EXISTS `helm_repo`;
 CREATE TABLE `helm_repo`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '仓库名称',
   `url` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '仓库地址',
   `username` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '认证用户名（可选）',
@@ -23314,7 +23314,7 @@ INSERT INTO `helm_repo` VALUES (4, 'prometheus-community', 'https://prometheus-c
 -- ----------------------------
 DROP TABLE IF EXISTS `instance_types`;
 CREATE TABLE `instance_types`  (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `type_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `description` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
   `created_at` datetime(3) NULL DEFAULT NULL,
@@ -23341,8 +23341,8 @@ INSERT INTO `instance_types` VALUES (25, 'Prometheus', 'Prometheus监控', '2026
 -- ----------------------------
 DROP TABLE IF EXISTS `instances`;
 CREATE TABLE `instances`  (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `instance_type_id` int UNSIGNED NOT NULL,
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `instance_type_id` int(10) UNSIGNED NOT NULL,
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `address` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `https_enabled` tinyint(1) NULL DEFAULT 0,
@@ -23365,14 +23365,14 @@ INSERT INTO `instances` VALUES (2, 7, 'test-kubeconfig', '10.0.0.175:6443', 1, 0
 INSERT INTO `instances` VALUES (7, 7, 'aliyun-k8s', '47.104.247.159:8943', 1, 1, 'online', '2026-02-07 21:35:09.757', '2026-02-07 21:35:09.757');
 INSERT INTO `instances` VALUES (8, 25, 'prometheus-31', '10.0.0.31:9090', 0, 0, 'offline', '2026-02-23 13:36:41.638', '2026-02-23 13:36:41.638');
 INSERT INTO `instances` VALUES (9, 25, 'aliyun-prometheus', '47.104.247.159:8999', 0, 0, 'offline', '2026-02-23 20:17:00.923', '2026-02-23 20:17:00.923');
-INSERT INTO `instances` VALUES (10, 1, 'test-es', '10.0.0.95:9200', 1, 1, 'active', '2026-03-04 11:14:36.706', '2026-03-04 20:05:46.448');
+INSERT INTO `instances` VALUES (10, 1, 'test-es', '10.0.0.95:9200', 1, 1, 'offline', '2026-03-04 11:14:36.706', '2026-03-04 20:05:46.448');
 
 -- ----------------------------
 -- Table structure for monitor_dns_providers
 -- ----------------------------
 DROP TABLE IF EXISTS `monitor_dns_providers`;
 CREATE TABLE `monitor_dns_providers`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `provider` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'aliyun/tencent/huawei/aws/cloudflare/...',
   `access_key` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '加密存储',
@@ -23397,17 +23397,17 @@ CREATE TABLE `monitor_dns_providers`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `monitor_domains`;
 CREATE TABLE `monitor_domains`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
   `domain` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
   `tags` json NULL,
   `protocol` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'https',
-  `check_interval` int NOT NULL DEFAULT 300,
+  `check_interval` int(11) NOT NULL DEFAULT 300,
   `enabled` tinyint(1) NOT NULL DEFAULT 1,
   `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT 'unknown' COMMENT 'normal/abnormal',
-  `status_code` int NULL DEFAULT NULL,
-  `response_time` int NULL DEFAULT NULL COMMENT '响应时间ms',
+  `status_code` int(11) NULL DEFAULT NULL,
+  `response_time` int(11) NULL DEFAULT NULL COMMENT '响应时间ms',
   `ssl_expiry` datetime(3) NULL DEFAULT NULL COMMENT 'SSL证书到期',
-  `ssl_days_left` int NULL DEFAULT NULL,
+  `ssl_days_left` int(11) NULL DEFAULT NULL,
   `cert_provider` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `last_check` datetime(3) NULL DEFAULT NULL,
   `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
@@ -23427,7 +23427,7 @@ CREATE TABLE `monitor_domains`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `monitor_incidents`;
 CREATE TABLE `monitor_incidents`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
   `alert_time` datetime(3) NOT NULL,
   `business_line` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '业务线',
   `level` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'P4' COMMENT 'P1/P2/P3/P4',
@@ -23453,14 +23453,14 @@ CREATE TABLE `monitor_incidents`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `monitor_ssl_certs`;
 CREATE TABLE `monitor_ssl_certs`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
   `domain` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL,
-  `dns_config_id` bigint UNSIGNED NULL DEFAULT NULL COMMENT '关联dns_providers.id',
+  `dns_config_id` bigint(20) UNSIGNED NULL DEFAULT NULL COMMENT '关联dns_providers.id',
   `cert_source` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'ACME' COMMENT 'ACME/CAS',
   `ca_provider` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'LetsEncrypt/ZeroSSL/DigiCert...',
   `key_algorithm` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'EC256',
   `email` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
-  `status` tinyint NOT NULL DEFAULT -1 COMMENT '-1申请中,1已签发,0失败,2已过期',
+  `status` tinyint(4) NOT NULL DEFAULT -1 COMMENT '-1申请中,1已签发,0失败,2已过期',
   `cert_id` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '第三方证书ID',
   `cert_pem` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '证书内容',
   `key_pem` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '私钥（加密存储）',
@@ -23481,8 +23481,8 @@ CREATE TABLE `monitor_ssl_certs`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `pipeline_runs`;
 CREATE TABLE `pipeline_runs`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `pipeline_id` int UNSIGNED NOT NULL COMMENT '关联流水线ID',
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `pipeline_id` int(10) UNSIGNED NOT NULL COMMENT '关联流水线ID',
   `workflow_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'K8s中生成的Workflow名称',
   `status` enum('Pending','Running','Succeeded','Failed','Error','Omitted') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT 'Pending' COMMENT '运行状态',
   `operator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '执行人',
@@ -23490,7 +23490,7 @@ CREATE TABLE `pipeline_runs`  (
   `commit_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '代码CommitID',
   `start_time` timestamp NULL DEFAULT NULL COMMENT '开始时间',
   `end_time` timestamp NULL DEFAULT NULL COMMENT '结束时间',
-  `duration` int UNSIGNED NULL DEFAULT 0 COMMENT '执行耗时，单位秒',
+  `duration` int(10) UNSIGNED NULL DEFAULT 0 COMMENT '执行耗时，单位秒',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `deleted_at` datetime NULL DEFAULT NULL,
@@ -23538,13 +23538,13 @@ INSERT INTO `pipeline_runs` VALUES (30, 3, 'devops-backend-9kbtc', 'Succeeded', 
 -- ----------------------------
 DROP TABLE IF EXISTS `pipeline_steps`;
 CREATE TABLE `pipeline_steps`  (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `pipeline_id` int UNSIGNED NOT NULL COMMENT '所属流水线ID',
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `pipeline_id` int(10) UNSIGNED NOT NULL COMMENT '所属流水线ID',
   `name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '步骤名称',
   `image` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '使用的镜像',
   `commands` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '运行命令',
   `depends_on` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '依赖的步骤名称',
-  `sort` int NULL DEFAULT 0 COMMENT '排序',
+  `sort` int(11) NULL DEFAULT 0 COMMENT '排序',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `deleted_at` datetime NULL DEFAULT NULL COMMENT '删除时间',
   PRIMARY KEY (`id`) USING BTREE,
@@ -23567,9 +23567,9 @@ INSERT INTO `pipeline_steps` VALUES (7, 3, '打包推送', 'gcr.m.daocloud.io/ka
 -- ----------------------------
 DROP TABLE IF EXISTS `pipelines`;
 CREATE TABLE `pipelines`  (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `project_id` int UNSIGNED NOT NULL COMMENT '关联项目ID',
-  `k8s_instance_id` int UNSIGNED NOT NULL COMMENT '目标K8s集群实例ID',
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `project_id` int(10) UNSIGNED NOT NULL COMMENT '关联项目ID',
+  `k8s_instance_id` int(10) UNSIGNED NOT NULL COMMENT '目标K8s集群实例ID',
   `name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '流水线名称',
   `git_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '代码仓库地址',
   `branch` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT 'main' COMMENT '默认构建分支',
@@ -23601,7 +23601,7 @@ INSERT INTO `pipelines` VALUES (9, 0, 7, 'devops-frontend', 'https://gitee.com/d
 -- ----------------------------
 DROP TABLE IF EXISTS `projects`;
 CREATE TABLE `projects`  (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '项目名称',
   `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '' COMMENT '项目描述',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
@@ -23620,14 +23620,14 @@ CREATE TABLE `projects`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_department`;
 CREATE TABLE `sys_department`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `parent_id` bigint UNSIGNED NULL DEFAULT 0 COMMENT '父部门ID，0表示顶级',
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `parent_id` bigint(20) UNSIGNED NULL DEFAULT 0 COMMENT '父部门ID，0表示顶级',
   `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '部门名称',
-  `sort` int NULL DEFAULT 0 COMMENT '显示顺序',
+  `sort` int(11) NULL DEFAULT 0 COMMENT '显示顺序',
   `leader` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '负责人',
   `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
-  `status` tinyint UNSIGNED NULL DEFAULT 1 COMMENT '1启用 0停用',
+  `status` tinyint(3) UNSIGNED NULL DEFAULT 1 COMMENT '1启用 0停用',
   `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
   `created_at` datetime(3) NULL DEFAULT NULL,
   `updated_at` datetime(3) NULL DEFAULT NULL,
@@ -23645,23 +23645,23 @@ INSERT INTO `sys_department` VALUES (1, 0, '运维部', 0, 'peppa-pig', '119', N
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_menu`;
 CREATE TABLE `sys_menu`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
-  `parent_id` bigint UNSIGNED NULL DEFAULT 0 COMMENT '父菜单ID',
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `parent_id` bigint(20) UNSIGNED NULL DEFAULT 0 COMMENT '父菜单ID',
   `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '菜单名称',
-  `type` tinyint NULL DEFAULT 1 COMMENT '1目录 2菜单 3按钮/接口',
+  `type` tinyint(4) NULL DEFAULT 1 COMMENT '1目录 2菜单 3按钮/接口',
   `path` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '前端路由路径',
   `component` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '前端组件路径',
   `icon` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `perm` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '权限标识，如 system:user:list',
-  `sort` int NULL DEFAULT 0,
-  `visible` tinyint NULL DEFAULT 1 COMMENT '1显示 0隐藏',
-  `status` tinyint UNSIGNED NULL DEFAULT 1,
+  `sort` int(11) NULL DEFAULT 0,
+  `visible` tinyint(4) NULL DEFAULT 1 COMMENT '1显示 0隐藏',
+  `status` tinyint(3) UNSIGNED NULL DEFAULT 1,
   `created_at` datetime(3) NULL DEFAULT NULL,
   `updated_at` datetime(3) NULL DEFAULT NULL,
   `deleted_at` datetime(3) NULL DEFAULT NULL COMMENT '删除时间（软删除）',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_sys_menu_deleted_at`(`deleted_at` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5079 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 5081 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_menu
@@ -23840,17 +23840,46 @@ INSERT INTO `sys_menu` VALUES (5075, 0, '实例管理', 2, '/es/instances', 'es/
 INSERT INTO `sys_menu` VALUES (5076, 300, '新增实例', 2, '/es/instances/add', 'es/InstanceForm', NULL, NULL, 2, 0, 1, '2026-03-04 10:35:43.000', '2026-03-04 10:35:43.000', '2026-03-04 10:42:57.881');
 INSERT INTO `sys_menu` VALUES (5077, 300, '编辑实例', 2, '/es/instances/edit/:id', 'es/InstanceForm', NULL, NULL, 3, 0, 1, '2026-03-04 10:35:43.000', '2026-03-04 10:35:43.000', '2026-03-04 10:43:22.397');
 INSERT INTO `sys_menu` VALUES (5078, 300, '实例详情', 2, '/es/instances/:id', 'es/InstanceDetail', NULL, NULL, 4, 0, 1, '2026-03-04 10:35:43.000', '2026-03-04 10:35:43.000', '2026-03-04 10:43:34.647');
+INSERT INTO `sys_menu` VALUES (5079, 0, '任务调度', 1, '/task-scheduler', 'Layout', 'Timer', 'task:scheduler:view', 100, 1, 1, '2026-03-25 11:20:56.000', NULL, NULL);
+INSERT INTO `sys_menu` VALUES (5080, 5079, '工作流管理', 2, '/task-scheduler/workflows', 'task-scheduler/WorkflowList', 'List', 'task:workflow:view', 1, 1, 1, '2026-03-25 11:20:56.000', NULL, NULL);
+
+-- ----------------------------
+-- Table structure for sys_menu_copy2
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_menu_copy2`;
+CREATE TABLE `sys_menu_copy2`  (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+  `parent_id` bigint(20) UNSIGNED NULL DEFAULT 0 COMMENT '父菜单ID',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '菜单名称',
+  `type` tinyint(4) NULL DEFAULT 1 COMMENT '1目录 2菜单 3按钮/接口',
+  `path` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '前端路由路径',
+  `component` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '前端组件路径',
+  `icon` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `perm` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '权限标识，如 system:user:list',
+  `sort` int(11) NULL DEFAULT 0,
+  `visible` tinyint(4) NULL DEFAULT 1 COMMENT '1显示 0隐藏',
+  `status` tinyint(3) UNSIGNED NULL DEFAULT 1,
+  `created_at` datetime(3) NULL DEFAULT NULL,
+  `updated_at` datetime(3) NULL DEFAULT NULL,
+  `deleted_at` datetime(3) NULL DEFAULT NULL COMMENT '删除时间（软删除）',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_sys_menu_deleted_at`(`deleted_at` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 5079 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of sys_menu_copy2
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for sys_position
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_position`;
 CREATE TABLE `sys_position`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '岗位名称',
   `code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '岗位编码',
-  `sort` int NULL DEFAULT 0,
-  `status` tinyint UNSIGNED NULL DEFAULT 1,
+  `sort` int(11) NULL DEFAULT 0,
+  `status` tinyint(3) UNSIGNED NULL DEFAULT 1,
   `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
   `created_at` datetime(3) NULL DEFAULT NULL,
   `updated_at` datetime(3) NULL DEFAULT NULL,
@@ -23869,11 +23898,11 @@ INSERT INTO `sys_position` VALUES (1, '运维开发岗位', 'SRE', 0, 1, NULL, '
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_role`;
 CREATE TABLE `sys_role`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
   `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '角色名称',
   `code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '角色编码，如 admin/operator',
-  `sort` int NULL DEFAULT 0,
-  `status` tinyint UNSIGNED NULL DEFAULT 1,
+  `sort` int(11) NULL DEFAULT 0,
+  `status` tinyint(3) UNSIGNED NULL DEFAULT 1,
   `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
   `created_at` datetime(3) NULL DEFAULT NULL,
   `updated_at` datetime(3) NULL DEFAULT NULL,
@@ -23893,8 +23922,8 @@ INSERT INTO `sys_role` VALUES (2, '测试角色', 'test', 2, 1, '测试专用', 
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_role_menu`;
 CREATE TABLE `sys_role_menu`  (
-  `role_id` bigint UNSIGNED NOT NULL,
-  `menu_id` bigint UNSIGNED NOT NULL,
+  `role_id` bigint(20) UNSIGNED NOT NULL,
+  `menu_id` bigint(20) UNSIGNED NOT NULL,
   PRIMARY KEY (`role_id`, `menu_id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
@@ -24072,6 +24101,8 @@ INSERT INTO `sys_role_menu` VALUES (1, 5072);
 INSERT INTO `sys_role_menu` VALUES (1, 5073);
 INSERT INTO `sys_role_menu` VALUES (1, 5074);
 INSERT INTO `sys_role_menu` VALUES (1, 5075);
+INSERT INTO `sys_role_menu` VALUES (1, 5079);
+INSERT INTO `sys_role_menu` VALUES (1, 5080);
 INSERT INTO `sys_role_menu` VALUES (2, 1);
 INSERT INTO `sys_role_menu` VALUES (2, 100);
 INSERT INTO `sys_role_menu` VALUES (2, 101);
@@ -24185,8 +24216,8 @@ INSERT INTO `sys_role_menu` VALUES (2, 5074);
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_user_position`;
 CREATE TABLE `sys_user_position`  (
-  `user_id` bigint UNSIGNED NOT NULL,
-  `position_id` bigint UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `position_id` bigint(20) UNSIGNED NOT NULL,
   PRIMARY KEY (`user_id`, `position_id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
@@ -24200,8 +24231,8 @@ INSERT INTO `sys_user_position` VALUES (2, 1);
 -- ----------------------------
 DROP TABLE IF EXISTS `sys_user_role`;
 CREATE TABLE `sys_user_role`  (
-  `user_id` bigint UNSIGNED NOT NULL,
-  `role_id` bigint UNSIGNED NOT NULL,
+  `user_id` bigint(20) UNSIGNED NOT NULL,
+  `role_id` bigint(20) UNSIGNED NOT NULL,
   PRIMARY KEY (`user_id`, `role_id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
@@ -24216,8 +24247,8 @@ INSERT INTO `sys_user_role` VALUES (2, 2);
 -- ----------------------------
 DROP TABLE IF EXISTS `system_user_token`;
 CREATE TABLE `system_user_token`  (
-  `id` bigint UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键id',
-  `user_id` bigint NOT NULL COMMENT '用户id',
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键id',
+  `user_id` bigint(20) NOT NULL COMMENT '用户id',
   `refresh_token` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '刷新token',
   `expires_at` datetime NOT NULL COMMENT '超时时间',
   `last_login_ip` varchar(45) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '最后登录的ip地址',
@@ -24226,7 +24257,7 @@ CREATE TABLE `system_user_token`  (
   `deleted_at` datetime NULL DEFAULT NULL COMMENT '删除时间',
   `access_token` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '登录token',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 170 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 182 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of system_user_token
@@ -24391,16 +24422,28 @@ INSERT INTO `system_user_token` VALUES (166, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6Ikp
 INSERT INTO `system_user_token` VALUES (167, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzczMjIyODIyLCJuYmYiOjE3NzI2MTgwMjIsImlhdCI6MTc3MjYxODAyMn0.BuKvf5a-tNLkii7DLSevkfE1aZFo3tOZR9rhS2UlFVI', '2026-03-04 17:53:42', NULL, '2026-03-04 17:53:43', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcyNjIxNjIyLCJuYmYiOjE3NzI2MTgwMjIsImlhdCI6MTc3MjYxODAyMn0.Aqzsl148d5QZANTaI63TXC76drFESBK-syYwYUjDqdM');
 INSERT INTO `system_user_token` VALUES (168, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzczMjMwNzAxLCJuYmYiOjE3NzI2MjU5MDEsImlhdCI6MTc3MjYyNTkwMX0.VDWq_tzPNy1TnlJr1PGlaE2i5PCDQQRC6DKOZ-oUVN0', '2026-03-04 20:05:01', NULL, '2026-03-04 20:05:00', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcyNjI5NTAxLCJuYmYiOjE3NzI2MjU5MDEsImlhdCI6MTc3MjYyNTkwMX0.mG1bsNb_ChHyT0DaC1I7MVhFP0xmRrGRgCVS_M9rn1g');
 INSERT INTO `system_user_token` VALUES (169, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzczMjMxMDExLCJuYmYiOjE3NzI2MjYyMTEsImlhdCI6MTc3MjYyNjIxMX0.b-3aAA5e7GAM0lc2yStaEMH-eD23HNumZkqSWDjZy5A', '2026-03-04 20:10:12', NULL, '2026-03-04 20:10:10', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzcyNjI5ODExLCJuYmYiOjE3NzI2MjYyMTEsImlhdCI6MTc3MjYyNjIxMX0.B57roCXGNT0Zet-hN5IrBMOiq7G6H_1xbx2gPLUuY6U');
+INSERT INTO `system_user_token` VALUES (170, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzc1MDE4MTc4LCJuYmYiOjE3NzQ0MTMzNzgsImlhdCI6MTc3NDQxMzM3OH0.PIKsyw1fi87JrB8P2QyJq9vAdD7HMwIsdHemkJMzUlQ', '2026-03-25 12:36:18', NULL, '2026-03-25 12:36:18', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzc0NDE2OTc4LCJuYmYiOjE3NzQ0MTMzNzgsImlhdCI6MTc3NDQxMzM3OH0.60NJdYNpyxQKsAzDtZppP_5lh1HiE3_3XTtlsIKQY1I');
+INSERT INTO `system_user_token` VALUES (171, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzc1MDIzMDc0LCJuYmYiOjE3NzQ0MTgyNzQsImlhdCI6MTc3NDQxODI3NH0.hbdNdUwaxG7Q0DLd_O4odtVy7Ro0NUKpwzFMuxkNAes', '2026-03-25 13:57:55', NULL, '2026-03-25 13:57:54', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzc0NDIxODc0LCJuYmYiOjE3NzQ0MTgyNzQsImlhdCI6MTc3NDQxODI3NH0.yH45gAwMc3eT9yy7vVKtM2CMYtsG3OoegZOte3KBfLQ');
+INSERT INTO `system_user_token` VALUES (172, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzc1MDMyMDU2LCJuYmYiOjE3NzQ0MjcyNTYsImlhdCI6MTc3NDQyNzI1Nn0.8yriUiqmyUzUciSOdBHddmnnuSkoG8hNZ97SiCn2OKE', '2026-03-25 16:27:36', NULL, '2026-03-25 16:27:36', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzc0NDMwODU2LCJuYmYiOjE3NzQ0MjcyNTYsImlhdCI6MTc3NDQyNzI1Nn0.aAqh8ea772kENlzNlmEOB50RD5i_Fm8OwzO6RU-CXTE');
+INSERT INTO `system_user_token` VALUES (173, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzc1MDQwMTIxLCJuYmYiOjE3NzQ0MzUzMjEsImlhdCI6MTc3NDQzNTMyMX0.xk-B1Zn25mcAysUxb77J1JzpFe8e_MUX8lQG6x1z-Ws', '2026-03-25 18:42:02', NULL, '2026-03-25 18:42:01', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzc0NDM4OTIxLCJuYmYiOjE3NzQ0MzUzMjEsImlhdCI6MTc3NDQzNTMyMX0.aCHbyi6ece3FWBrqSIjhLbNllVGF_q_L-Oi-yeR55Dw');
+INSERT INTO `system_user_token` VALUES (174, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzc1MDQ1MDkxLCJuYmYiOjE3NzQ0NDAyOTEsImlhdCI6MTc3NDQ0MDI5MX0.4feQr4MgOL_ggva_-SblkJNCmsD0D6wEeP_8hFJBsy8', '2026-03-25 20:04:52', NULL, '2026-03-25 20:04:51', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzc0NDQzODkxLCJuYmYiOjE3NzQ0NDAyOTEsImlhdCI6MTc3NDQ0MDI5MX0.iUc7II7_8cuyGnXSjrmIBsKKKcgndes0x2p67QfxNcw');
+INSERT INTO `system_user_token` VALUES (175, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzc1MDkzMzkzLCJuYmYiOjE3NzQ0ODg1OTMsImlhdCI6MTc3NDQ4ODU5M30.SNxu-G5Z4shJlRChoj4NPBBLopmWpwiyswq98ZTWyjM', '2026-03-26 09:29:53', NULL, '2026-03-26 09:29:53', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzc0NDkyMTkzLCJuYmYiOjE3NzQ0ODg1OTMsImlhdCI6MTc3NDQ4ODU5M30.C4Eiiz5zqtp-fPZ0KTo_V5slOSNYtrU-zAnChyHoQIg');
+INSERT INTO `system_user_token` VALUES (176, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzc1MDk3MzIwLCJuYmYiOjE3NzQ0OTI1MjAsImlhdCI6MTc3NDQ5MjUyMH0.qj5E97tCc0Ti5GCQOarjNTI12BTEYytkp74bOQEoU_U', '2026-03-26 10:35:21', NULL, '2026-03-26 10:35:20', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzc0NDk2MTIwLCJuYmYiOjE3NzQ0OTI1MjAsImlhdCI6MTc3NDQ5MjUyMH0.2CKix_qvw-AN-GcD9VEN47UDJR-f-Mju19DdPX22ATY');
+INSERT INTO `system_user_token` VALUES (177, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzc1MTEyMjk4LCJuYmYiOjE3NzQ1MDc0OTgsImlhdCI6MTc3NDUwNzQ5OH0.LP6QsMaq0oG3DeHteW12N8AGHSMAwJ-3PAIslG_uGRU', '2026-03-26 14:44:59', NULL, '2026-03-26 14:44:58', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzc0NTExMDk4LCJuYmYiOjE3NzQ1MDc0OTgsImlhdCI6MTc3NDUwNzQ5OH0.e4CtMEW3JKb8UgiuLNk9DUzkqQ0uNf0umRt8GUt3njU');
+INSERT INTO `system_user_token` VALUES (178, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzc1MTE3MDY3LCJuYmYiOjE3NzQ1MTIyNjcsImlhdCI6MTc3NDUxMjI2N30.r_tFYfteoak8UGMVejN7TtF3_R5BHHFd4RBTwE_Olcw', '2026-03-26 16:04:27', NULL, '2026-03-26 16:04:27', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzc0NTE1ODY3LCJuYmYiOjE3NzQ1MTIyNjcsImlhdCI6MTc3NDUxMjI2N30.fQEN2UD2yjJ8Kl0H4uDrGNS0H1Lgel1JFOessx5xwjo');
+INSERT INTO `system_user_token` VALUES (179, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzc1MTIxOTY3LCJuYmYiOjE3NzQ1MTcxNjcsImlhdCI6MTc3NDUxNzE2N30.XciO5kflp1wecMDXKf0LkOfyEOj331uU9NE2SfyyCoI', '2026-03-26 17:26:07', NULL, '2026-03-26 17:26:07', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzc0NTIwNzY3LCJuYmYiOjE3NzQ1MTcxNjcsImlhdCI6MTc3NDUxNzE2N30.cbmK43vYbhJ1ta9qjvFA6miKbSrGIgUXTZ2C6xEd1uQ');
+INSERT INTO `system_user_token` VALUES (180, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzc1MTI4Mjc1LCJuYmYiOjE3NzQ1MjM0NzUsImlhdCI6MTc3NDUyMzQ3NX0.OQ5dCoD_qGs3OGuiUw-gxqqTFI2c2LUVQ9fNXL-eQxQ', '2026-03-26 19:11:16', NULL, '2026-03-26 19:11:16', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzc0NTI3MDc1LCJuYmYiOjE3NzQ1MjM0NzUsImlhdCI6MTc3NDUyMzQ3NX0.jdOFoBNoTtUh_YF4eDErZk0N_bbvPQt25SW2115FGzs');
+INSERT INTO `system_user_token` VALUES (181, 1, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiIiLCJSb2xlcyI6bnVsbCwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwic3ViIjoicmVmcmVzaF8xIiwiZXhwIjoxNzc1MTMxOTAwLCJuYmYiOjE3NzQ1MjcxMDAsImlhdCI6MTc3NDUyNzEwMH0.AH-jZKqKqbvuNf6kjQTj9Y7kZbOCzwaixB1gDh9lYDw', '2026-03-26 20:11:41', NULL, '2026-03-26 20:11:41', NULL, NULL, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJJRCI6MSwiVXNlcm5hbWUiOiJhZG1pbiIsIlJvbGVzIjpbXSwiaXNzIjoiazhzLXBsYXRmb3JtLWdvIiwiZXhwIjoxNzc0NTMwNzAwLCJuYmYiOjE3NzQ1MjcxMDAsImlhdCI6MTc3NDUyNzEwMH0.hEKruEIlOISuAoFQJDOwvFdkLRfPvra0ciPmD9goSsU');
 
 -- ----------------------------
 -- Table structure for system_users
 -- ----------------------------
 DROP TABLE IF EXISTS `system_users`;
 CREATE TABLE `system_users`  (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键id',
+  `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键id',
   `username` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
   `password` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT '',
-  `status` tinyint UNSIGNED NOT NULL,
+  `status` tinyint(3) UNSIGNED NOT NULL,
   `nickname` varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT '',
   `created_at` datetime(3) NULL DEFAULT NULL,
   `updated_at` datetime(3) NULL DEFAULT NULL,
@@ -24408,7 +24451,7 @@ CREATE TABLE `system_users`  (
   `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '邮箱',
   `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '手机号',
   `avatar` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '头像',
-  `dept_id` bigint UNSIGNED NULL DEFAULT NULL COMMENT '部门ID',
+  `dept_id` bigint(20) UNSIGNED NULL DEFAULT NULL COMMENT '部门ID',
   `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '备注',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_account_user_id`(`username` ASC) USING BTREE,
@@ -24420,6 +24463,281 @@ CREATE TABLE `system_users`  (
 -- ----------------------------
 INSERT INTO `system_users` VALUES (1, 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 1, 'admin', '2026-01-24 21:17:21.000', '2026-01-24 21:17:25.000', NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO `system_users` VALUES (2, 'test', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 1, 'test', '2026-02-27 11:57:00.690', '2026-02-27 12:04:14.874', NULL, 'peppapig7030@gmail.com', '110', NULL, 1, '');
+
+-- ----------------------------
+-- Table structure for task_alert_rules
+-- ----------------------------
+DROP TABLE IF EXISTS `task_alert_rules`;
+CREATE TABLE `task_alert_rules`  (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `workflow_id` bigint(20) UNSIGNED NOT NULL COMMENT '工作流ID',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '规则名称',
+  `rule_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'execution' COMMENT '规则类型：execution-duration-failure_rate',
+  `condition` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '条件表达式',
+  `notify_channels` json NOT NULL COMMENT '通知渠道：webhook-email-sms',
+  `notify_config` json NOT NULL COMMENT '通知配置',
+  `is_enabled` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否启用',
+  `created_at` datetime(3) NULL DEFAULT NULL COMMENT '创建时间',
+  `updated_at` datetime(3) NULL DEFAULT NULL COMMENT '更新时间',
+  `deleted_at` datetime(3) NULL DEFAULT NULL COMMENT '删除时间（软删除）',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_workflow_id`(`workflow_id` ASC) USING BTREE,
+  INDEX `idx_is_enabled`(`is_enabled` ASC) USING BTREE,
+  INDEX `idx_deleted_at`(`deleted_at` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '任务告警规则表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of task_alert_rules
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for task_edges
+-- ----------------------------
+DROP TABLE IF EXISTS `task_edges`;
+CREATE TABLE `task_edges`  (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `workflow_id` bigint(20) UNSIGNED NOT NULL COMMENT '所属工作流ID',
+  `source_node_id` bigint(20) UNSIGNED NOT NULL COMMENT '源节点ID',
+  `target_node_id` bigint(20) UNSIGNED NOT NULL COMMENT '目标节点ID',
+  `condition` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '条件表达式（支持条件分支）',
+  `edge_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'default' COMMENT '边类型：default-success-failure-condition',
+  `created_at` datetime(3) NULL DEFAULT NULL COMMENT '创建时间',
+  `source_handle` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '源节点连接点：top/bottom/left/right',
+  `target_handle` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '目标节点连接点：top/bottom/left/right',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_workflow_id`(`workflow_id` ASC) USING BTREE,
+  INDEX `idx_source_node`(`source_node_id` ASC) USING BTREE,
+  INDEX `idx_target_node`(`target_node_id` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '任务边定义表（节点依赖关系）' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of task_edges
+-- ----------------------------
+INSERT INTO `task_edges` VALUES (6, 7, 15, 16, '', 'default', '2026-03-26 19:57:39.940', 'right', 'left');
+INSERT INTO `task_edges` VALUES (7, 6, 17, 18, '', 'default', '2026-03-26 19:57:48.063', 'right', 'left');
+
+-- ----------------------------
+-- Table structure for task_executions
+-- ----------------------------
+DROP TABLE IF EXISTS `task_executions`;
+CREATE TABLE `task_executions`  (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `workflow_id` bigint(20) UNSIGNED NOT NULL COMMENT '工作流ID',
+  `execution_no` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '执行编号（用于追踪）',
+  `trigger_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'schedule' COMMENT '触发类型：schedule-manual-api-webhook',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'running' COMMENT '状态：pending-running-success-failed-cancelled',
+  `start_time` datetime(3) NULL DEFAULT NULL COMMENT '开始时间',
+  `end_time` datetime(3) NULL DEFAULT NULL COMMENT '结束时间',
+  `duration` int(11) NULL DEFAULT NULL COMMENT '执行时长(毫秒)',
+  `result` json NULL COMMENT '执行结果',
+  `error_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '错误信息',
+  `triggered_by` bigint(20) UNSIGNED NULL DEFAULT NULL COMMENT '触发用户ID（手动触发时）',
+  `retry_count` tinyint(4) NOT NULL DEFAULT 0 COMMENT '已重试次数',
+  `next_retry_time` datetime(3) NULL DEFAULT NULL COMMENT '下次重试时间',
+  `created_at` datetime(3) NULL DEFAULT NULL COMMENT '创建时间',
+  `updated_at` datetime(3) NULL DEFAULT NULL COMMENT '更新时间',
+  `deleted_at` datetime(3) NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_workflow_id`(`workflow_id` ASC) USING BTREE,
+  INDEX `idx_execution_no`(`execution_no` ASC) USING BTREE,
+  INDEX `idx_status`(`status` ASC) USING BTREE,
+  INDEX `idx_start_time`(`start_time` ASC) USING BTREE,
+  INDEX `idx_created_at`(`created_at` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 24 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '任务执行记录表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of task_executions
+-- ----------------------------
+INSERT INTO `task_executions` VALUES (1, 0, '', '', 'success', NULL, '2026-03-26 09:54:29.082', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 09:54:29.083', NULL);
+INSERT INTO `task_executions` VALUES (2, 0, '', '', 'success', NULL, '2026-03-26 10:11:43.656', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 10:11:43.657', NULL);
+INSERT INTO `task_executions` VALUES (3, 0, '', '', 'success', NULL, '2026-03-26 10:22:51.375', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 10:22:51.375', NULL);
+INSERT INTO `task_executions` VALUES (4, 0, '', '', 'success', NULL, '2026-03-26 10:25:28.593', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 10:25:28.593', NULL);
+INSERT INTO `task_executions` VALUES (5, 0, '', '', 'success', NULL, '2026-03-26 10:35:27.538', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 10:35:27.538', NULL);
+INSERT INTO `task_executions` VALUES (6, 0, '', '', 'success', NULL, '2026-03-26 10:46:17.145', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 10:46:17.145', NULL);
+INSERT INTO `task_executions` VALUES (7, 0, '', '', 'success', NULL, '2026-03-26 10:48:31.324', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 10:48:31.324', NULL);
+INSERT INTO `task_executions` VALUES (8, 0, '', '', 'success', NULL, '2026-03-26 14:46:46.380', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 14:46:46.380', NULL);
+INSERT INTO `task_executions` VALUES (9, 0, '', '', 'success', NULL, '2026-03-26 15:00:52.644', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 15:00:52.644', NULL);
+INSERT INTO `task_executions` VALUES (10, 0, '', '', 'success', NULL, '2026-03-26 15:04:16.773', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 15:04:16.773', NULL);
+INSERT INTO `task_executions` VALUES (11, 0, '', '', 'success', NULL, '2026-03-26 15:31:19.995', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 15:31:19.995', NULL);
+INSERT INTO `task_executions` VALUES (12, 0, '', '', 'success', NULL, '2026-03-26 15:32:18.095', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 15:32:18.095', NULL);
+INSERT INTO `task_executions` VALUES (13, 0, '', '', 'success', NULL, '2026-03-26 16:04:35.776', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 16:04:35.776', NULL);
+INSERT INTO `task_executions` VALUES (14, 0, '', '', 'success', NULL, '2026-03-26 16:05:06.893', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 16:05:06.893', NULL);
+INSERT INTO `task_executions` VALUES (15, 0, '', '', 'success', NULL, '2026-03-26 16:57:08.253', 0, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 16:57:08.253', NULL);
+INSERT INTO `task_executions` VALUES (16, 6, 'EXEC-1774517179', 'manual', 'success', '2026-03-26 17:26:19.898', '2026-03-26 17:26:21.065', 1166, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 17:26:21.065', NULL);
+INSERT INTO `task_executions` VALUES (17, 6, 'EXEC-1774526401', 'manual', 'success', '2026-03-26 20:00:01.001', '2026-03-26 20:00:02.606', 1605, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 20:00:02.607', NULL);
+INSERT INTO `task_executions` VALUES (18, 8, 'EXEC-1774526401', 'manual', 'success', '2026-03-26 20:00:01.001', '2026-03-26 20:00:01.830', 829, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 20:00:01.830', NULL);
+INSERT INTO `task_executions` VALUES (19, 6, 'EXEC-1774526461', 'manual', 'success', '2026-03-26 20:01:01.001', '2026-03-26 20:01:02.397', 1396, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 20:01:02.398', NULL);
+INSERT INTO `task_executions` VALUES (20, 8, 'EXEC-1774526461', 'manual', 'success', '2026-03-26 20:01:01.001', '2026-03-26 20:01:01.816', 814, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 20:01:01.816', NULL);
+INSERT INTO `task_executions` VALUES (21, 6, 'EXEC-1774527121', 'schedule', 'success', '2026-03-26 20:12:01.001', '2026-03-26 20:12:02.705', 1704, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 20:12:02.705', NULL);
+INSERT INTO `task_executions` VALUES (22, 8, 'EXEC-1774527121', 'schedule', 'success', '2026-03-26 20:12:01.001', '2026-03-26 20:12:01.708', 707, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 20:12:01.708', NULL);
+INSERT INTO `task_executions` VALUES (23, 6, 'EXEC-1774527421', 'schedule', 'success', '2026-03-26 20:17:01.001', '2026-03-26 20:17:02.307', 1306, NULL, NULL, 0, 0, NULL, NULL, '2026-03-26 20:17:02.308', NULL);
+
+-- ----------------------------
+-- Table structure for task_node_executions
+-- ----------------------------
+DROP TABLE IF EXISTS `task_node_executions`;
+CREATE TABLE `task_node_executions`  (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `execution_id` bigint(20) UNSIGNED NOT NULL COMMENT '执行记录ID',
+  `node_id` bigint(20) UNSIGNED NOT NULL COMMENT '节点ID',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'pending' COMMENT '状态：pending-running-success-failed-skipped',
+  `start_time` datetime(3) NULL DEFAULT NULL COMMENT '开始时间',
+  `end_time` datetime(3) NULL DEFAULT NULL COMMENT '结束时间',
+  `duration` int(11) NULL DEFAULT NULL COMMENT '执行时长(毫秒)',
+  `input_params` json NULL COMMENT '输入参数',
+  `output_params` json NULL COMMENT '输出参数',
+  `logs` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '执行日志',
+  `error_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '错误信息',
+  `retry_count` tinyint(4) NOT NULL DEFAULT 0 COMMENT '已重试次数',
+  `created_at` datetime(3) NULL DEFAULT NULL COMMENT '创建时间',
+  `updated_at` datetime(3) NULL DEFAULT NULL COMMENT '更新时间',
+  `deleted_at` datetime(3) NULL DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_execution_id`(`execution_id` ASC) USING BTREE,
+  INDEX `idx_node_id`(`node_id` ASC) USING BTREE,
+  INDEX `idx_status`(`status` ASC) USING BTREE,
+  INDEX `idx_start_time`(`start_time` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 14 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '任务节点执行记录表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of task_node_executions
+-- ----------------------------
+INSERT INTO `task_node_executions` VALUES (1, 16, 12, 'success', '2026-03-26 17:26:19.935', '2026-03-26 17:26:20.477', 531, NULL, '{}', '[2026-03-26 17:26:19] info: >>> 开始执行节点: test (ID: 12, 类型: script)\n[2026-03-26 17:26:19] info: 开始远程执行shell脚本, 目标主机: 47.104.247.159:22 (ID: 1)\n[2026-03-26 17:26:19] info: 执行内容: \necho \"test\" > /tmp/test26.txt\n[2026-03-26 17:26:19] info: 正在连接主机 47.104.247.159:22...\n[2026-03-26 17:26:20] info: 远程脚本执行成功，耗时: 531ms\n[2026-03-26 17:26:20] info: <<< 节点执行成功: test (耗时: 531ms)', '', 0, NULL, '2026-03-26 17:26:20.478', NULL);
+INSERT INTO `task_node_executions` VALUES (2, 16, 13, 'success', '2026-03-26 17:26:20.491', '2026-03-26 17:26:21.049', 540, NULL, '{}', '[2026-03-26 17:26:20] info: >>> 开始执行节点: test02 (ID: 13, 类型: script)\n[2026-03-26 17:26:20] info: 开始远程执行shell脚本, 目标主机: 47.104.247.159:22 (ID: 1)\n[2026-03-26 17:26:20] info: 执行内容: \necho \"test02\" > /tmp/test26.txt\n[2026-03-26 17:26:20] info: 正在连接主机 47.104.247.159:22...\n[2026-03-26 17:26:21] info: 远程脚本执行成功，耗时: 540ms\n[2026-03-26 17:26:21] info: <<< 节点执行成功: test02 (耗时: 540ms)', '', 0, NULL, '2026-03-26 17:26:21.050', NULL);
+INSERT INTO `task_node_executions` VALUES (3, 18, 20, 'success', '2026-03-26 20:00:01.040', '2026-03-26 20:00:01.818', 769, NULL, '{}', '[2026-03-26 20:00:01] info: >>> 开始执行节点: 1 (ID: 20, 类型: script)\n[2026-03-26 20:00:01] info: 开始远程执行shell脚本, 目标主机: 47.104.247.159:22 (ID: 1)\n[2026-03-26 20:00:01] info: 执行内容: \necho \"1111\"\n[2026-03-26 20:00:01] info: 正在连接主机 47.104.247.159:22...\n[2026-03-26 20:00:01] info: 远程脚本标准输出: \n1111\n\n[2026-03-26 20:00:01] info: 远程脚本执行成功，耗时: 769ms\n[2026-03-26 20:00:01] info: <<< 节点执行成功: 1 (耗时: 769ms)', '', 0, NULL, '2026-03-26 20:00:01.818', NULL);
+INSERT INTO `task_node_executions` VALUES (4, 17, 17, 'success', '2026-03-26 20:00:01.039', '2026-03-26 20:00:02.013', 958, NULL, '{}', '[2026-03-26 20:00:01] info: >>> 开始执行节点: test (ID: 17, 类型: script)\n[2026-03-26 20:00:01] info: 开始远程执行shell脚本, 目标主机: 47.104.247.159:22 (ID: 1)\n[2026-03-26 20:00:01] info: 执行内容: \necho \"test\" > /tmp/test26.txt\n[2026-03-26 20:00:01] info: 正在连接主机 47.104.247.159:22...\n[2026-03-26 20:00:02] info: 远程脚本执行成功，耗时: 958ms\n[2026-03-26 20:00:02] info: <<< 节点执行成功: test (耗时: 958ms)', '', 0, NULL, '2026-03-26 20:00:02.013', NULL);
+INSERT INTO `task_node_executions` VALUES (5, 17, 18, 'success', '2026-03-26 20:00:02.033', '2026-03-26 20:00:02.588', 548, NULL, '{}', '[2026-03-26 20:00:02] info: >>> 开始执行节点: test02 (ID: 18, 类型: script)\n[2026-03-26 20:00:02] info: 开始远程执行shell脚本, 目标主机: 47.104.247.159:22 (ID: 1)\n[2026-03-26 20:00:02] info: 执行内容: \necho \"test02\" > /tmp/test26.txt\n[2026-03-26 20:00:02] info: 正在连接主机 47.104.247.159:22...\n[2026-03-26 20:00:02] info: 远程脚本执行成功，耗时: 548ms\n[2026-03-26 20:00:02] info: <<< 节点执行成功: test02 (耗时: 548ms)', '', 0, NULL, '2026-03-26 20:00:02.589', NULL);
+INSERT INTO `task_node_executions` VALUES (6, 19, 17, 'success', '2026-03-26 20:01:01.075', '2026-03-26 20:01:01.655', 570, NULL, '{}', '[2026-03-26 20:01:01] info: >>> 开始执行节点: test (ID: 17, 类型: script)\n[2026-03-26 20:01:01] info: 开始远程执行shell脚本, 目标主机: 47.104.247.159:22 (ID: 1)\n[2026-03-26 20:01:01] info: 执行内容: \necho \"test\" > /tmp/test26.txt\n[2026-03-26 20:01:01] info: 正在连接主机 47.104.247.159:22...\n[2026-03-26 20:01:01] info: 远程脚本执行成功，耗时: 570ms\n[2026-03-26 20:01:01] info: <<< 节点执行成功: test (耗时: 570ms)', '', 0, NULL, '2026-03-26 20:01:01.655', NULL);
+INSERT INTO `task_node_executions` VALUES (7, 20, 20, 'success', '2026-03-26 20:01:01.077', '2026-03-26 20:01:01.807', 722, NULL, '{}', '[2026-03-26 20:01:01] info: >>> 开始执行节点: 1 (ID: 20, 类型: script)\n[2026-03-26 20:01:01] info: 开始远程执行shell脚本, 目标主机: 47.104.247.159:22 (ID: 1)\n[2026-03-26 20:01:01] info: 执行内容: \necho \"1111\"\n[2026-03-26 20:01:01] info: 正在连接主机 47.104.247.159:22...\n[2026-03-26 20:01:01] info: 远程脚本标准输出: \n1111\n\n[2026-03-26 20:01:01] info: 远程脚本执行成功，耗时: 722ms\n[2026-03-26 20:01:01] info: <<< 节点执行成功: 1 (耗时: 722ms)', '', 0, NULL, '2026-03-26 20:01:01.808', NULL);
+INSERT INTO `task_node_executions` VALUES (8, 19, 18, 'success', '2026-03-26 20:01:01.665', '2026-03-26 20:01:02.382', 709, NULL, '{}', '[2026-03-26 20:01:01] info: >>> 开始执行节点: test02 (ID: 18, 类型: script)\n[2026-03-26 20:01:01] info: 开始远程执行shell脚本, 目标主机: 47.104.247.159:22 (ID: 1)\n[2026-03-26 20:01:01] info: 执行内容: \necho \"test02\" > /tmp/test26.txt\n[2026-03-26 20:01:01] info: 正在连接主机 47.104.247.159:22...\n[2026-03-26 20:01:02] info: 远程脚本执行成功，耗时: 709ms\n[2026-03-26 20:01:02] info: <<< 节点执行成功: test02 (耗时: 709ms)', '', 0, NULL, '2026-03-26 20:01:02.383', NULL);
+INSERT INTO `task_node_executions` VALUES (9, 21, 17, 'success', '2026-03-26 20:12:01.118', '2026-03-26 20:12:01.715', 590, NULL, '{}', '[2026-03-26 20:12:01] info: >>> 开始执行节点: test (ID: 17, 类型: script)\n[2026-03-26 20:12:01] info: 开始远程执行shell脚本, 目标主机: 47.104.247.159:22 (ID: 1)\n[2026-03-26 20:12:01] info: 执行内容: \necho \"test\" > /tmp/test26.txt\n[2026-03-26 20:12:01] info: 正在连接主机 47.104.247.159:22...\n[2026-03-26 20:12:01] info: 远程脚本执行成功，耗时: 590ms\n[2026-03-26 20:12:01] info: <<< 节点执行成功: test (耗时: 590ms)', '', 0, NULL, '2026-03-26 20:12:01.715', NULL);
+INSERT INTO `task_node_executions` VALUES (10, 22, 20, 'success', '2026-03-26 20:12:01.120', '2026-03-26 20:12:01.689', 556, NULL, '{}', '[2026-03-26 20:12:01] info: >>> 开始执行节点: 1 (ID: 20, 类型: script)\n[2026-03-26 20:12:01] info: 开始远程执行shell脚本, 目标主机: 47.104.247.159:22 (ID: 1)\n[2026-03-26 20:12:01] info: 执行内容: \necho \"1111\"\n[2026-03-26 20:12:01] info: 正在连接主机 47.104.247.159:22...\n[2026-03-26 20:12:01] info: 远程脚本标准输出: \n1111\n\n[2026-03-26 20:12:01] info: 远程脚本执行成功，耗时: 556ms\n[2026-03-26 20:12:01] info: <<< 节点执行成功: 1 (耗时: 556ms)', '', 0, NULL, '2026-03-26 20:12:01.689', NULL);
+INSERT INTO `task_node_executions` VALUES (11, 21, 18, 'success', '2026-03-26 20:12:01.720', '2026-03-26 20:12:02.688', 963, NULL, '{}', '[2026-03-26 20:12:01] info: >>> 开始执行节点: test02 (ID: 18, 类型: script)\n[2026-03-26 20:12:01] info: 开始远程执行shell脚本, 目标主机: 47.104.247.159:22 (ID: 1)\n[2026-03-26 20:12:01] info: 执行内容: \necho \"test02\" > /tmp/test26.txt\n[2026-03-26 20:12:01] info: 正在连接主机 47.104.247.159:22...\n[2026-03-26 20:12:02] info: 远程脚本执行成功，耗时: 963ms\n[2026-03-26 20:12:02] info: <<< 节点执行成功: test02 (耗时: 963ms)', '', 0, NULL, '2026-03-26 20:12:02.689', NULL);
+INSERT INTO `task_node_executions` VALUES (12, 23, 17, 'success', '2026-03-26 20:17:01.013', '2026-03-26 20:17:01.737', 716, NULL, '{}', '[2026-03-26 20:17:01] info: >>> 开始执行节点: test (ID: 17, 类型: script)\n[2026-03-26 20:17:01] info: 开始远程执行shell脚本, 目标主机: 47.104.247.159:22 (ID: 1)\n[2026-03-26 20:17:01] info: 执行内容: \necho \"test\" > /tmp/test26.txt\n[2026-03-26 20:17:01] info: 正在连接主机 47.104.247.159:22...\n[2026-03-26 20:17:01] info: 远程脚本执行成功，耗时: 716ms\n[2026-03-26 20:17:01] info: <<< 节点执行成功: test (耗时: 716ms)', '', 0, NULL, '2026-03-26 20:17:01.737', NULL);
+INSERT INTO `task_node_executions` VALUES (13, 23, 18, 'success', '2026-03-26 20:17:01.747', '2026-03-26 20:17:02.290', 536, NULL, '{}', '[2026-03-26 20:17:01] info: >>> 开始执行节点: test02 (ID: 18, 类型: script)\n[2026-03-26 20:17:01] info: 开始远程执行shell脚本, 目标主机: 47.104.247.159:22 (ID: 1)\n[2026-03-26 20:17:01] info: 执行内容: \necho \"test02\" > /tmp/test26.txt\n[2026-03-26 20:17:01] info: 正在连接主机 47.104.247.159:22...\n[2026-03-26 20:17:02] info: 远程脚本执行成功，耗时: 536ms\n[2026-03-26 20:17:02] info: <<< 节点执行成功: test02 (耗时: 536ms)', '', 0, NULL, '2026-03-26 20:17:02.290', NULL);
+
+-- ----------------------------
+-- Table structure for task_nodes
+-- ----------------------------
+DROP TABLE IF EXISTS `task_nodes`;
+CREATE TABLE `task_nodes`  (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `workflow_id` bigint(20) UNSIGNED NOT NULL COMMENT '所属工作流ID',
+  `node_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '节点名称',
+  `node_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'task' COMMENT '节点类型：start-task-end-condition-loop',
+  `task_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'http' COMMENT '任务类型：http/script/sql/kubernetes',
+  `config` json NULL COMMENT '任务配置JSON',
+  `timeout` int(11) NULL DEFAULT 300 COMMENT '节点超时时间(秒)',
+  `retry_count` tinyint(4) NULL DEFAULT 3 COMMENT '节点重试次数',
+  `position_x` int(11) NULL DEFAULT 0 COMMENT '节点位置X（可视化用）',
+  `position_y` int(11) NULL DEFAULT 0 COMMENT '节点位置Y（可视化用）',
+  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '执行顺序',
+  `created_at` datetime(3) NULL DEFAULT NULL COMMENT '创建时间',
+  `updated_at` datetime(3) NULL DEFAULT NULL COMMENT '更新时间',
+  `deleted_at` datetime(3) NULL DEFAULT NULL COMMENT '删除时间（软删除）',
+  `target_id` bigint(20) UNSIGNED NULL DEFAULT NULL COMMENT '执行目标ID',
+  `target_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '目标类型：host/k8s/db',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_workflow_id`(`workflow_id` ASC) USING BTREE,
+  INDEX `idx_deleted_at`(`deleted_at` ASC) USING BTREE,
+  INDEX `idx_sort_order`(`sort_order` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 23 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '任务节点定义表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of task_nodes
+-- ----------------------------
+INSERT INTO `task_nodes` VALUES (1, 5, 'test', 'script', 'shell', '{\"url\": \"\", \"name\": \"test\", \"method\": \"GET\", \"content\": \"echo \\\"test\\\" > /tmp/test26.txt\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 0, 0, 0, NULL, NULL, '2026-03-25 19:34:30.831', 0, '');
+INSERT INTO `task_nodes` VALUES (2, 6, 'test', 'script', 'shell', '{\"url\": \"\", \"name\": \"test\", \"method\": \"GET\", \"content\": \"echo \\\"test\\\" > /tmp/test26.txt\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 289, 195, 0, '2026-03-25 19:36:02.251', '2026-03-25 19:36:02.251', '2026-03-25 19:37:10.244', 0, '');
+INSERT INTO `task_nodes` VALUES (3, 6, 'test', 'script', 'shell', '{\"url\": \"\", \"name\": \"test\", \"method\": \"GET\", \"content\": \"echo \\\"test\\\" > /tmp/test26.txt\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 143, 128, 0, NULL, '2026-03-25 19:37:10.243', '2026-03-26 16:04:46.296', 0, '');
+INSERT INTO `task_nodes` VALUES (4, 6, 'test02', 'script', 'shell', '{\"url\": \"\", \"name\": \"test02\", \"method\": \"GET\", \"content\": \"echo \\\"test02\\\" > /tmp/test26.txt\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 569, 155, 0, NULL, '2026-03-25 19:37:10.243', '2026-03-26 16:04:46.296', 0, '');
+INSERT INTO `task_nodes` VALUES (5, 7, 'test01', 'script', '', '{\"url\": \"\", \"name\": \"test01\", \"method\": \"GET\", \"content\": \"echo \\\"test01\\\"  >/tmp/test.txt\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 103, 63, 0, '2026-03-26 15:06:57.990', '2026-03-26 15:06:57.990', '2026-03-26 15:07:44.486', 0, '');
+INSERT INTO `task_nodes` VALUES (6, 7, 'test01', 'script', '', '{\"url\": \"\", \"name\": \"test01\", \"method\": \"GET\", \"content\": \"cat /etc/passwd\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 423, 64, 0, '2026-03-26 15:06:57.990', '2026-03-26 15:06:57.990', '2026-03-26 15:07:44.486', 0, '');
+INSERT INTO `task_nodes` VALUES (7, 7, 'test01', 'script', '', '{\"url\": \"\", \"name\": \"test01\", \"method\": \"GET\", \"content\": \"echo \\\"test0122\\\"  >/tmp/test.txt\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 103, 63, 0, NULL, '2026-03-26 15:07:44.484', '2026-03-26 15:13:24.325', 0, '');
+INSERT INTO `task_nodes` VALUES (8, 7, 'test01', 'script', '', '{\"url\": \"\", \"name\": \"test01\", \"method\": \"GET\", \"content\": \"cat /etc/passwd\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 423, 64, 0, NULL, '2026-03-26 15:07:44.484', '2026-03-26 15:13:24.325', 0, '');
+INSERT INTO `task_nodes` VALUES (9, 8, '1', 'script', '', '{\"url\": \"\", \"name\": \"1\", \"method\": \"GET\", \"content\": \"echo \\\"1111\\\"\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 400, 207, 0, '2026-03-26 15:09:55.439', '2026-03-26 15:09:55.439', '2026-03-26 19:57:31.079', 0, '');
+INSERT INTO `task_nodes` VALUES (10, 7, 'test01', 'script', '', '{\"url\": \"\", \"name\": \"test01\", \"method\": \"GET\", \"content\": \"echo \\\"test0122\\\"  >/tmp/test.txt\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 103, 63, 0, NULL, '2026-03-26 15:13:24.324', '2026-03-26 19:57:39.942', 1, 'host');
+INSERT INTO `task_nodes` VALUES (11, 7, 'test01', 'script', '', '{\"url\": \"\", \"name\": \"test01\", \"method\": \"GET\", \"content\": \"cat /etc/passwd\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 423, 64, 0, NULL, '2026-03-26 15:13:24.324', '2026-03-26 19:57:39.942', 1, 'host');
+INSERT INTO `task_nodes` VALUES (12, 6, 'test', 'script', '', '{\"url\": \"\", \"name\": \"test\", \"method\": \"GET\", \"content\": \"echo \\\"test\\\" > /tmp/test26.txt\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 143, 128, 0, NULL, '2026-03-26 16:04:46.295', '2026-03-26 19:57:48.064', 1, 'host');
+INSERT INTO `task_nodes` VALUES (13, 6, 'test02', 'script', '', '{\"url\": \"\", \"name\": \"test02\", \"method\": \"GET\", \"content\": \"echo \\\"test02\\\" > /tmp/test26.txt\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 569, 155, 0, NULL, '2026-03-26 16:04:46.295', '2026-03-26 19:57:48.064', 1, 'host');
+INSERT INTO `task_nodes` VALUES (14, 8, '1', 'script', '', '{\"url\": \"\", \"name\": \"1\", \"method\": \"GET\", \"content\": \"echo \\\"1111\\\"\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 381, 287, 0, NULL, '2026-03-26 19:57:31.076', '2026-03-26 19:58:49.794', 1, 'host');
+INSERT INTO `task_nodes` VALUES (15, 7, 'test01', 'script', '', '{\"url\": \"\", \"name\": \"test01\", \"method\": \"GET\", \"content\": \"echo \\\"test0122\\\"  >/tmp/test.txt\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 103, 63, 0, NULL, '2026-03-26 19:57:39.940', NULL, 1, 'host');
+INSERT INTO `task_nodes` VALUES (16, 7, 'test01', 'script', '', '{\"url\": \"\", \"name\": \"test01\", \"method\": \"GET\", \"content\": \"cat /etc/passwd\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 423, 64, 0, NULL, '2026-03-26 19:57:39.940', NULL, 1, 'host');
+INSERT INTO `task_nodes` VALUES (17, 6, 'test', 'script', '', '{\"url\": \"\", \"name\": \"test\", \"method\": \"GET\", \"content\": \"echo \\\"test\\\" > /tmp/test26.txt\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 143, 128, 0, NULL, '2026-03-26 19:57:48.063', NULL, 1, 'host');
+INSERT INTO `task_nodes` VALUES (18, 6, 'test02', 'script', '', '{\"url\": \"\", \"name\": \"test02\", \"method\": \"GET\", \"content\": \"echo \\\"test02\\\" > /tmp/test26.txt\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 569, 155, 0, NULL, '2026-03-26 19:57:48.063', NULL, 1, 'host');
+INSERT INTO `task_nodes` VALUES (19, 8, '1', 'script', '', '{\"url\": \"\", \"name\": \"1\", \"method\": \"GET\", \"content\": \"echo \\\"1111\\\"\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 381, 287, 0, NULL, '2026-03-26 19:58:49.792', '2026-03-26 19:59:03.265', 1, 'host');
+INSERT INTO `task_nodes` VALUES (20, 8, '1', 'script', '', '{\"url\": \"\", \"name\": \"1\", \"method\": \"GET\", \"content\": \"echo \\\"1111\\\"\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 381, 287, 0, NULL, '2026-03-26 19:59:03.263', '2026-03-26 20:13:01.634', 1, 'host');
+INSERT INTO `task_nodes` VALUES (21, 8, '1', 'script', '', '{\"url\": \"\", \"name\": \"1\", \"method\": \"GET\", \"content\": \"echo \\\"1111\\\"\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 381, 287, 0, NULL, '2026-03-26 20:13:01.631', '2026-03-26 20:22:03.357', 1, 'host');
+INSERT INTO `task_nodes` VALUES (22, 8, '1', 'script', '', '{\"url\": \"\", \"name\": \"1\", \"method\": \"GET\", \"content\": \"echo \\\"1111\\\"\", \"targetId\": 1, \"operation\": \"apply\", \"script_type\": \"shell\", \"resource_type\": \"deployment\"}', 0, 0, 381, 287, 0, NULL, '2026-03-26 20:22:03.356', NULL, 1, 'host');
+
+-- ----------------------------
+-- Table structure for task_templates
+-- ----------------------------
+DROP TABLE IF EXISTS `task_templates`;
+CREATE TABLE `task_templates`  (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '模板名称',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '模板描述',
+  `category` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'common' COMMENT '分类：common-devops-monitor-backup',
+  `task_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'http' COMMENT '任务类型',
+  `icon` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '图标',
+  `config` json NOT NULL COMMENT '模板配置',
+  `variables` json NULL COMMENT '模板变量定义',
+  `is_system` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否系统模板：0-否，1-是',
+  `is_public` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否公开：0-私有，1-公开',
+  `created_by` bigint(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建者用户ID',
+  `usage_count` int(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT '使用次数',
+  `created_at` datetime(3) NULL DEFAULT NULL COMMENT '创建时间',
+  `updated_at` datetime(3) NULL DEFAULT NULL COMMENT '更新时间',
+  `deleted_at` datetime(3) NULL DEFAULT NULL COMMENT '删除时间（软删除）',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_category`(`category` ASC) USING BTREE,
+  INDEX `idx_task_type`(`task_type` ASC) USING BTREE,
+  INDEX `idx_is_system`(`is_system` ASC) USING BTREE,
+  INDEX `idx_deleted_at`(`deleted_at` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '任务模板表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of task_templates
+-- ----------------------------
+INSERT INTO `task_templates` VALUES (1, 'HTTP请求', '发送HTTP请求到指定接口', 'common', 'http', 'Link', '{\"url\": \"\", \"body\": \"\", \"method\": \"GET\", \"headers\": {}, \"timeout\": 30}', '[{\"name\": \"url\", \"type\": \"string\", \"label\": \"请求地址\", \"required\": true}, {\"name\": \"method\", \"type\": \"select\", \"label\": \"请求方法\", \"default\": \"GET\", \"options\": [\"GET\", \"POST\", \"PUT\", \"DELETE\"]}, {\"name\": \"headers\", \"type\": \"json\", \"label\": \"请求头\"}, {\"name\": \"body\", \"type\": \"textarea\", \"label\": \"请求体\"}]', 1, 1, 0, 0, '2026-03-25 09:30:37.000', '2026-03-25 09:30:37.000', NULL);
+INSERT INTO `task_templates` VALUES (2, '执行Shell脚本', '在远程主机或本地执行Shell命令', 'common', 'script', 'Terminal', '{\"script\": \"\", \"timeout\": 300, \"env_vars\": {}, \"script_type\": \"shell\", \"working_dir\": \"\"}', '[{\"name\": \"script\", \"type\": \"textarea\", \"label\": \"脚本内容\", \"required\": true}, {\"name\": \"working_dir\", \"type\": \"string\", \"label\": \"工作目录\"}, {\"name\": \"env_vars\", \"type\": \"json\", \"label\": \"环境变量\"}, {\"name\": \"timeout\", \"type\": \"number\", \"label\": \"超时时间(秒)\", \"default\": 300}]', 1, 1, 0, 0, '2026-03-25 09:30:37.000', '2026-03-25 09:30:37.000', NULL);
+INSERT INTO `task_templates` VALUES (3, '执行SQL', '在指定数据库执行SQL语句', 'common', 'sql', 'DataAnalysis', '{\"sql\": \"\", \"timeout\": 60, \"database\": \"\", \"db_instance_id\": 0}', '[{\"name\": \"db_instance_id\", \"type\": \"select\", \"label\": \"数据库实例\", \"required\": true}, {\"name\": \"database\", \"type\": \"string\", \"label\": \"数据库名\"}, {\"name\": \"sql\", \"type\": \"textarea\", \"label\": \"SQL语句\", \"required\": true}]', 1, 1, 0, 0, '2026-03-25 09:30:37.000', '2026-03-25 09:30:37.000', NULL);
+INSERT INTO `task_templates` VALUES (4, 'Kubernetes操作', '执行Kubernetes命令或应用YAML', 'devops', 'kubernetes', 'Collection', '{\"yaml\": \"\", \"action\": \"apply\", \"timeout\": 300, \"namespace\": \"default\", \"k8s_instance_id\": 0}', '[{\"name\": \"k8s_instance_id\", \"type\": \"select\", \"label\": \"K8s集群\", \"required\": true}, {\"name\": \"namespace\", \"type\": \"string\", \"label\": \"命名空间\", \"default\": \"default\"}, {\"name\": \"action\", \"type\": \"select\", \"label\": \"操作类型\", \"default\": \"apply\", \"options\": [\"apply\", \"delete\", \"get\", \"exec\"]}, {\"name\": \"yaml\", \"type\": \"textarea\", \"label\": \"YAML内容\"}]', 1, 1, 0, 0, '2026-03-25 09:30:37.000', '2026-03-25 09:30:37.000', NULL);
+INSERT INTO `task_templates` VALUES (5, '发送邮件', '发送邮件通知', 'common', 'email', 'Message', '{\"cc\": [], \"to\": [], \"content\": \"\", \"subject\": \"\", \"content_type\": \"text\"}', '[{\"name\": \"to\", \"type\": \"array\", \"label\": \"收件人\", \"required\": true}, {\"name\": \"cc\", \"type\": \"array\", \"label\": \"抄送\"}, {\"name\": \"subject\", \"type\": \"string\", \"label\": \"主题\", \"required\": true}, {\"name\": \"content\", \"type\": \"textarea\", \"label\": \"内容\", \"required\": true}, {\"name\": \"content_type\", \"type\": \"select\", \"label\": \"内容类型\", \"default\": \"text\", \"options\": [\"text\", \"html\"]}]', 1, 1, 0, 0, '2026-03-25 09:30:37.000', '2026-03-25 09:30:37.000', NULL);
+INSERT INTO `task_templates` VALUES (6, 'Webhook通知', '发送Webhook回调', 'common', 'webhook', 'Connection', '{\"url\": \"\", \"body\": \"\", \"retry\": 3, \"method\": \"POST\", \"headers\": {}}', '[{\"name\": \"url\", \"type\": \"string\", \"label\": \"Webhook地址\", \"required\": true}, {\"name\": \"method\", \"type\": \"select\", \"label\": \"请求方法\", \"default\": \"POST\", \"options\": [\"GET\", \"POST\", \"PUT\"]}, {\"name\": \"headers\", \"type\": \"json\", \"label\": \"请求头\"}, {\"name\": \"body\", \"type\": \"textarea\", \"label\": \"请求体\"}, {\"name\": \"retry\", \"type\": \"number\", \"label\": \"重试次数\", \"default\": 3}]', 1, 1, 0, 0, '2026-03-25 09:30:37.000', '2026-03-25 09:30:37.000', NULL);
+
+-- ----------------------------
+-- Table structure for task_workflows
+-- ----------------------------
+DROP TABLE IF EXISTS `task_workflows`;
+CREATE TABLE `task_workflows`  (
+  `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '工作流名称',
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '工作流描述',
+  `cron_expression` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'Cron表达式，空表示手动触发',
+  `status` tinyint(4) NOT NULL DEFAULT 1 COMMENT '状态：0-禁用，1-启用',
+  `task_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL DEFAULT 'http' COMMENT '任务类型：http/script/sql/kubernetes',
+  `retry_count` tinyint(4) NOT NULL DEFAULT 3 COMMENT '失败重试次数',
+  `retry_interval` int(11) NOT NULL DEFAULT 30 COMMENT '重试间隔(秒)',
+  `timeout` int(11) NOT NULL DEFAULT 300 COMMENT '任务超时时间(秒)',
+  `concurrent_limit` tinyint(4) NOT NULL DEFAULT 1 COMMENT '并发限制：1-串行，>1-并行',
+  `created_by` bigint(20) UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建者用户ID',
+  `created_at` datetime(3) NULL DEFAULT NULL COMMENT '创建时间',
+  `updated_at` datetime(3) NULL DEFAULT NULL COMMENT '更新时间',
+  `deleted_at` datetime(3) NULL DEFAULT NULL COMMENT '删除时间（软删除）',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_status`(`status` ASC) USING BTREE,
+  INDEX `idx_deleted_at`(`deleted_at` ASC) USING BTREE,
+  INDEX `idx_created_at`(`created_at` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '任务编排定义表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of task_workflows
+-- ----------------------------
+INSERT INTO `task_workflows` VALUES (5, '测试工作流', '', '', 1, 'workflow', 0, 0, 0, 1, 0, NULL, NULL, '2026-03-25 19:34:30.826');
+INSERT INTO `task_workflows` VALUES (6, '测试工作流', '', '1 * * * * *', 0, 'workflow', 0, 0, 0, 1, 0, '2026-03-25 19:36:02.251', '2026-03-26 20:17:22.434', NULL);
+INSERT INTO `task_workflows` VALUES (7, '测试工作流2', '', '1 * * * * *', 0, 'workflow', 0, 0, 0, 1, 0, '2026-03-26 15:06:57.990', '2026-03-26 19:58:52.199', NULL);
+INSERT INTO `task_workflows` VALUES (8, '1', '', '', 0, 'workflow', 0, 0, 0, 1, 0, '2026-03-26 15:09:55.439', '2026-03-26 20:22:03.356', NULL);
 
 -- ----------------------------
 -- View structure for resource_details

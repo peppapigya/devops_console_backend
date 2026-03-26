@@ -23,19 +23,25 @@ import (
 	_ "devops-console-backend/docs" // swagger docs
 	"devops-console-backend/internal/common"
 	"devops-console-backend/internal/controllers/monitor"
+	"devops-console-backend/internal/dal/model"
 	"devops-console-backend/internal/middlewares"
 	"devops-console-backend/internal/routes"
 	"devops-console-backend/internal/services/probe"
+	"devops-console-backend/internal/services/scheduler"
+	"devops-console-backend/internal/services/task_scheduler/executor"
 	"devops-console-backend/internal/websocket"
 	"devops-console-backend/pkg/configs"
 	"devops-console-backend/pkg/database"
 	"devops-console-backend/pkg/utils/logs"
+	"fmt"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"gorm.io/gorm"
 )
 
 func main() {
@@ -82,10 +88,18 @@ func main() {
 		})
 	})
 
+	executor.InitExecutors()
+
 	// 注册路由
 	routers.RegisterRouters(r, configs.GORMDB)
 	// 注册WebSocket路由
 	websocket.RegisterWebSocketRoutes(r)
+
+	go func() {
+		if err := loadCronSchedules(configs.GORMDB); err != nil {
+			logs.Error(nil, fmt.Sprintf("加载定时调度失败: %v", err))
+		}
+	}()
 
 	go func() {
 		http.Handle("/metrics", promhttp.Handler())
@@ -103,4 +117,36 @@ func setMiddleware(router *gin.Engine, globalConfig *common.GlobalConfig) {
 	router.Use(middlewares.Authenticate(globalConfig.Jwt.ExcludePaths...))
 	router.Use(middlewares.Metrics())
 	router.Use(middlewares.IPRateLimit())
+}
+
+func loadCronSchedules(db *gorm.DB) error {
+	var workflows []*model.TaskWorkflow
+	if err := db.Where("status = ? AND cron_expression IS NOT NULL AND cron_expression != ?", 1, "").Find(&workflows).Error; err != nil {
+		return err
+	}
+
+	cronScheduler := scheduler.GetScheduler(nil)
+	count := 0
+	for _, workflow := range workflows {
+		if workflow.CronExpression != nil && *workflow.CronExpression == "" && workflow.Status == 1 {
+			continue
+		}
+		var nodes []*model.TaskNode
+		if err := db.Where("workflow_id = ?", workflow.ID).Find(&nodes).Error; err != nil {
+			continue
+		}
+		var edges []*model.TaskEdge
+		if err := db.Where("workflow_id = ?", workflow.ID).Find(&edges).Error; err != nil {
+			continue
+		}
+		err := cronScheduler.AddWorkflow(workflow, nodes, edges)
+		if err != nil {
+			log.Printf("调度失败：%v", err.Error())
+			continue
+		}
+		count++
+	}
+
+	logs.Info(nil, fmt.Sprintf("已加载 %d 个定时工作流", count))
+	return nil
 }

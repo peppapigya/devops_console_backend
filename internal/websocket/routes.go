@@ -13,4 +13,6 @@ func RegisterWebSocketRoutes(r *gin.Engine) {
 
 	// Pod终端WebSocket
 	ws.GET("/pod/:podname/exec", NewPodExecHandler().HandleWebSocket)
+
+	ws.GET("/executions/:id/logs", HandleLogWebSocket)
 }
