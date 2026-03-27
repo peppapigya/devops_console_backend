@@ -5,6 +5,8 @@ import (
 	"devops-console-backend/internal/dal/mapper"
 	"devops-console-backend/internal/dal/model"
 	reqAsset "devops-console-backend/internal/dal/request/asset"
+	"devops-console-backend/pkg/configs"
+	"devops-console-backend/pkg/utils/aes"
 	"strconv"
 	"time"
 
@@ -248,4 +250,26 @@ func (c *HostController) GetHostStats(ctx *gin.Context) {
 
 func parseUint64Param(ctx *gin.Context, key string) (uint64, error) {
 	return strconv.ParseUint(ctx.Param(key), 10, 64)
+}
+
+func decryptPassword(encryptedPassword string) (string, error) {
+	key, err := configs.GetEncryptionKey()
+	if err != nil {
+		return "", err
+	}
+	if key == nil {
+		return encryptedPassword, nil
+	}
+	return aes.AESDecrypt(key, encryptedPassword)
+}
+
+func GetDecryptPassword(password string) string {
+	if password == "" {
+		return ""
+	}
+	decrypted, err := decryptPassword(password)
+	if err != nil {
+		return password
+	}
+	return decrypted
 }

@@ -4,6 +4,7 @@ package configs
 import (
 	"devops-console-backend/internal/common"
 	"devops-console-backend/pkg/utils/logs"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -85,6 +86,10 @@ type HealthConfig struct {
 }
 
 // 应用配置
+type EncryptionConfig struct {
+	Key string `mapstructure:"key" yaml:"key"`
+}
+
 type AppConfig struct {
 	Server        ServerConfig        `mapstructure:"server" yaml:"server"`
 	Database      DatabaseConfig      `mapstructure:"database" yaml:"database"`
@@ -93,6 +98,7 @@ type AppConfig struct {
 	Kubernetes    KubernetesConfig    `mapstructure:"kubernetes" yaml:"kubernetes"`
 	Swagger       SwaggerConfig       `mapstructure:"swagger" yaml:"swagger"`
 	Health        HealthConfig        `mapstructure:"health" yaml:"health"`
+	Encryption    EncryptionConfig    `mapstructure:"encryption" yaml:"encryption"`
 }
 
 // initLogConfig 初始化日志配置
@@ -162,6 +168,18 @@ func GetSwaggerConfig() SwaggerConfig {
 // GetHealthConfig 获取健康检查配置
 func GetHealthConfig() HealthConfig {
 	return Config.Health
+}
+
+func GetEncryptionConfig() EncryptionConfig {
+	return Config.Encryption
+}
+
+func GetEncryptionKey() ([]byte, error) {
+	keyStr := Config.Encryption.Key
+	if keyStr == "" {
+		return nil, nil
+	}
+	return base64.StdEncoding.DecodeString(keyStr)
 }
 
 // IsDebugMode 判断是否为调试模式

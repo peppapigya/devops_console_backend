@@ -2,6 +2,8 @@ package mapper
 
 import (
 	"devops-console-backend/internal/dal/model"
+	"devops-console-backend/pkg/configs"
+	"devops-console-backend/pkg/utils/aes"
 	"errors"
 
 	"gorm.io/gorm"
@@ -158,4 +160,27 @@ func (m *AssetHostMapper) Stats(groupID uint64) (map[string]interface{}, error) 
 		result[r.Key] = r.Count
 	}
 	return result, nil
+}
+
+// GetDecryptedPassword 获取解密后的密码
+func (m *AssetHostMapper) GetDecryptedPassword(id uint64) (string, error) {
+	host, err := m.GetByID(id)
+	if err != nil {
+		return "", err
+	}
+	if host.Password == nil || *host.Password == "" {
+		return "", nil
+	}
+	return decryptPassword(*host.Password)
+}
+
+func decryptPassword(encryptedPassword string) (string, error) {
+	key, err := configs.GetEncryptionKey()
+	if err != nil {
+		return "", err
+	}
+	if key == nil {
+		return encryptedPassword, nil
+	}
+	return aes.AESDecrypt(key, encryptedPassword)
 }

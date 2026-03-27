@@ -88,3 +88,7 @@ jwt:
     - /metrics
     - /ws/*
     - /health
+
+# 加密配置 (用于敏感数据如主机密码等)
+encryption:
+  key: "So722DGlBzRASCG9so/Knfuy81cdhQ7gArgZjcJHvpQ="  # AES-256 key, base64 encoded, 32 bytes
