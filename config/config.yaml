@@ -74,6 +74,12 @@ redis:
   port: 8001
   password: "peppa-pig"
   db: 0
+ai:
+  mcp:
+    enabled: true
+    url: "http://127.0.0.1:8080"
+    token: "" # apikey
+    max_retries: 3
 
 jwt:
   secret: "n02y2Zqf4eL0hZ4xjQH9w1zDk1w5FqMnc9R+N8T1v2E="
