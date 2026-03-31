@@ -28,5 +28,9 @@ func (r *ChaosRoute) RegisterSubRouter(apiGroup *gin.RouterGroup) {
 		chaosGroup.DELETE("/delete/:namespace/:name", r.controller.DeleteFault)
 		chaosGroup.PUT("/pause/:namespace/:name", r.controller.PauseFault)
 		chaosGroup.PUT("/resume/:namespace/:name", r.controller.ResumeFault)
+		// 演练节点驱逐
+		chaosGroup.GET("/nodes", r.controller.GetChaosNodes)
+		chaosGroup.POST("/evict/prepare", r.controller.PrepareEviction)
+		chaosGroup.POST("/evict/cleanup", r.controller.CleanupEviction)
 	}
 }

@@ -315,13 +315,10 @@ func performKubernetesConnectionTest(instance *dal.Instance, authConfig *dal.Aut
 	var kubeconfig struct {
 		Config string `json:"config"`
 	}
-	if err := json.Unmarshal([]byte(authConfig.ConfigValue), &kubeconfig); err != nil {
-		return TestResultFailure, 0, "解析 kubeconfig 配置失败: " + err.Error()
-	}
 
-	if kubeconfig.Config == "" {
-		// 如果没有嵌套的config字段，直接使用configValue作为kubeconfig内容
-		kubeconfig.Config = authConfig.ConfigValue
+	configContent := authConfig.ConfigValue
+	if err := json.Unmarshal([]byte(authConfig.ConfigValue), &kubeconfig); err == nil && kubeconfig.Config != "" {
+		configContent = kubeconfig.Config
 	}
 
 	// TODO: 实际的 Kubernetes 连接测试
@@ -330,9 +327,9 @@ func performKubernetesConnectionTest(instance *dal.Instance, authConfig *dal.Aut
 	responseTime := time.Since(startTime).Milliseconds()
 
 	// 简单验证 kubeconfig 格式
-	if len(kubeconfig.Config) > 50 && (strings.Contains(kubeconfig.Config, "apiVersion") ||
-		strings.Contains(kubeconfig.Config, "clusters") ||
-		strings.Contains(kubeconfig.Config, "current-context")) {
+	if len(configContent) > 50 && (strings.Contains(configContent, "apiVersion") ||
+		strings.Contains(configContent, "clusters") ||
+		strings.Contains(configContent, "current-context")) {
 		return TestResultSuccess, responseTime, "Kubernetes 配置验证通过"
 	}
 

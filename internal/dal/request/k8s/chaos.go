@@ -206,3 +206,24 @@ type ChaosExperimentResumeRequest struct {
 	Name      string `json:"name" binding:"required"`
 	Namespace string `json:"namespace" binding:"required"`
 }
+
+// ChaosNode 演练节点信息
+type ChaosNode struct {
+	Name   string            `json:"name"`
+	Labels map[string]string `json:"labels"`
+	Status string            `json:"status"` // Ready / NotReady
+}
+
+// PrepareEvictionRequest 准备演练节点驱逐请求
+type PrepareEvictionRequest struct {
+	NodeName       string `json:"nodeName" binding:"required"`       // 演练节点名称
+	Namespace      string `json:"namespace" binding:"required"`      // 目标命名空间
+	DeploymentName string `json:"deploymentName" binding:"required"` // 目标 Deployment 名
+}
+
+// CleanupEvictionRequest 清理演练环境请求
+type CleanupEvictionRequest struct {
+	NodeName       string `json:"nodeName" binding:"required"`
+	Namespace      string `json:"namespace" binding:"required"`
+	DeploymentName string `json:"deploymentName" binding:"required"`
+}

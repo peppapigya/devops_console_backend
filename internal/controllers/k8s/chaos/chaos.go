@@ -2,21 +2,50 @@ package chaos
 
 import (
 	"devops-console-backend/internal/dal/request/k8s"
-	chaos_service "devops-console-backend/internal/services/k8s/chaos"
+	chaosService "devops-console-backend/internal/services/k8s/chaos"
 	"devops-console-backend/pkg/utils"
 	"devops-console-backend/pkg/utils/logs"
+	"fmt"
 	"strconv"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 )
 
+// origSpecCache 临时缓存演练前的 Deployment 原始 spec（key: namespace/deployment）
+var (
+	origSpecCache   = make(map[string]string)
+	origSpecCacheMu sync.RWMutex
+)
+
+func setOrigSpec(namespace, deployment, spec string) {
+	origSpecCacheMu.Lock()
+	defer origSpecCacheMu.Unlock()
+	origSpecCache[namespace+"/"+deployment] = spec
+}
+
+func getOrigSpec(namespace, deployment string) (string, bool) {
+	origSpecCacheMu.RLock()
+	defer origSpecCacheMu.RUnlock()
+	v, ok := origSpecCache[namespace+"/"+deployment]
+	return v, ok
+}
+
+func deleteOrigSpec(namespace, deployment string) {
+	origSpecCacheMu.Lock()
+	defer origSpecCacheMu.Unlock()
+	delete(origSpecCache, namespace+"/"+deployment)
+}
+
 type ChaosController struct {
-	service *chaos_service.ChaosService
+	service         *chaosService.ChaosService
+	evictionService *chaosService.EvictionService
 }
 
 func NewChaosController() *ChaosController {
 	return &ChaosController{
-		service: chaos_service.NewChaosService(),
+		service:         chaosService.NewChaosService(),
+		evictionService: chaosService.NewEvictionService(),
 	}
 }
 
@@ -194,4 +223,114 @@ func (c *ChaosController) ResumeFault(ctx *gin.Context) {
 	logs.Info(logData, "Resume chaos experiment success")
 	helper := utils.NewResponseHelper(ctx)
 	helper.Success("Chaos experiment resumed successfully")
+}
+
+// GetChaosNodes 获取所有演练节点（role=chaos-testing）
+func (c *ChaosController) GetChaosNodes(ctx *gin.Context) {
+	instanceIDStr := ctx.Query("instance_id")
+	instanceID := uint(1)
+	if instanceIDStr != "" {
+		if id, err := strconv.ParseInt(instanceIDStr, 10, 32); err == nil {
+			instanceID = uint(id)
+		}
+	}
+
+	nodes, err := c.evictionService.GetChaosTestingNodes(ctx, instanceID)
+	if err != nil {
+		logs.Error(map[string]interface{}{}, "Get chaos testing nodes failed: "+err.Error())
+		helper := utils.NewResponseHelper(ctx)
+		helper.InternalError("获取演练节点失败: " + err.Error())
+		return
+	}
+
+	helper := utils.NewResponseHelper(ctx)
+	helper.SuccessWithData("success", "nodes", nodes)
+}
+
+// PrepareEviction 执行完整的演练节点准备流程（Taint → Patch → Evict → Wait）
+func (c *ChaosController) PrepareEviction(ctx *gin.Context) {
+	var req k8s.PrepareEvictionRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		helper := utils.NewResponseHelper(ctx)
+		helper.BadRequest("Invalid request: " + err.Error())
+		return
+	}
+
+	instanceIDStr := ctx.Query("instance_id")
+	instanceID := uint(1)
+	if instanceIDStr != "" {
+		if id, err := strconv.ParseInt(instanceIDStr, 10, 32); err == nil {
+			instanceID = uint(id)
+		}
+	}
+
+	logData := map[string]interface{}{
+		"node":       req.NodeName,
+		"namespace":  req.Namespace,
+		"deployment": req.DeploymentName,
+	}
+	logs.Info(logData, "Prepare eviction start")
+
+	origSpecJSON, err := c.evictionService.PrepareEviction(ctx, instanceID, &req)
+	if err != nil {
+		logs.Error(logData, "Prepare eviction failed: "+err.Error())
+		helper := utils.NewResponseHelper(ctx)
+		helper.InternalError("演练节点准备失败: " + err.Error())
+		return
+	}
+
+	// 缓存原始 spec，供清理时使用
+	setOrigSpec(req.Namespace, req.DeploymentName, origSpecJSON)
+
+	logs.Info(logData, "Prepare eviction success")
+	helper := utils.NewResponseHelper(ctx)
+	helper.Success("演练节点准备完成，Pod 已迁移到演练节点")
+}
+
+// CleanupEviction 清理演练环境（回滚 Deployment → re-Evict → 去 Taint）
+func (c *ChaosController) CleanupEviction(ctx *gin.Context) {
+	var req k8s.CleanupEvictionRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		helper := utils.NewResponseHelper(ctx)
+		helper.BadRequest("Invalid request: " + err.Error())
+		return
+	}
+
+	instanceIDStr := ctx.Query("instance_id")
+	instanceID := uint(1)
+	if instanceIDStr != "" {
+		if id, err := strconv.ParseInt(instanceIDStr, 10, 32); err == nil {
+			instanceID = uint(id)
+		}
+	}
+
+	logData := map[string]interface{}{
+		"node":       req.NodeName,
+		"namespace":  req.Namespace,
+		"deployment": req.DeploymentName,
+	}
+
+	origSpecJSON, ok := getOrigSpec(req.Namespace, req.DeploymentName)
+	if !ok {
+		logs.Error(logData, "orig spec not found in cache")
+		helper := utils.NewResponseHelper(ctx)
+		helper.BadRequest(fmt.Sprintf("未找到 %s/%s 的原始 spec，无法回滚", req.Namespace, req.DeploymentName))
+		return
+	}
+
+	logs.Info(logData, "Cleanup eviction start")
+
+	if err := c.evictionService.CleanupEviction(ctx, instanceID, &req, origSpecJSON); err != nil {
+		logs.Error(logData, "Cleanup eviction failed: "+err.Error())
+		helper := utils.NewResponseHelper(ctx)
+		helper.InternalError("清理演练环境失败: " + err.Error())
+		return
+	}
+
+	// 清理缓存
+	deleteOrigSpec(req.Namespace, req.DeploymentName)
+
+	logs.Info(logData, "Cleanup eviction success")
+	helper := utils.NewResponseHelper(ctx)
+	helper.Success("演练环境清理完成，Pod 已恢复正常调度")
 }

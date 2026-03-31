@@ -180,6 +180,12 @@ func AddK8sClient(instance *dal.Instance, authConfig *dal.AuthConfig) error {
 	k8sClientsLock.Lock()
 	defer k8sClientsLock.Unlock()
 
+	k8sConfigLock.Lock()
+	defer k8sConfigLock.Unlock()
+
+	k8sDynamicClientsLock.Lock()
+	defer k8sDynamicClientsLock.Unlock()
+
 	if authConfig.AuthType != "kubeconfig" {
 		return fmt.Errorf("不支持的k8s认证类型: %s", authConfig.AuthType)
 	}
@@ -213,10 +219,25 @@ func AddK8sClient(instance *dal.Instance, authConfig *dal.AuthConfig) error {
 		return err
 	}
 
+	dynamicClient, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
 	if k8sClients == nil {
 		k8sClients = make(map[uint]*kubernetes.Clientset)
 	}
+	if configMap == nil {
+		configMap = make(map[uint]*rest.Config)
+	}
+	if k8sDynamicClients == nil {
+		k8sDynamicClients = make(map[uint]dynamic.Interface)
+	}
+
 	k8sClients[instance.ID] = clientSet
+	configMap[instance.ID] = restConfig
+	k8sDynamicClients[instance.ID] = dynamicClient
+
 	logs.Info(map[string]interface{}{
 		"instance_id":   instance.ID,
 		"instance_name": instance.Name,
@@ -230,7 +251,16 @@ func RemoveK8sClient(instanceID uint) {
 	k8sClientsLock.Lock()
 	defer k8sClientsLock.Unlock()
 
+	k8sConfigLock.Lock()
+	defer k8sConfigLock.Unlock()
+
+	k8sDynamicClientsLock.Lock()
+	defer k8sDynamicClientsLock.Unlock()
+
 	delete(k8sClients, instanceID)
+	delete(configMap, instanceID)
+	delete(k8sDynamicClients, instanceID)
+
 	logs.Info(map[string]interface{}{
 		"instance_id": instanceID,
 	}, "k8s客户端移除成功")
