@@ -49,6 +49,7 @@ func NewChaosController() *ChaosController {
 	}
 }
 
+// CreateFault 创建故障
 func (c *ChaosController) CreateFault(ctx *gin.Context) {
 	namespace := ctx.Param("namespace")
 	logData := map[string]interface{}{"namespace": namespace}
@@ -82,6 +83,7 @@ func (c *ChaosController) CreateFault(ctx *gin.Context) {
 	helper.Success("Chaos experiment created successfully")
 }
 
+// ListFaults 列出指定命名空间下的所有故障
 func (c *ChaosController) ListFaults(ctx *gin.Context) {
 	namespace := ctx.Param("namespace")
 	logData := map[string]interface{}{"namespace": namespace}
@@ -120,6 +122,7 @@ func (c *ChaosController) ListFaults(ctx *gin.Context) {
 	helper.SuccessWithData("success", "faults", list)
 }
 
+// GetFault 获取指定名称的故障详情
 func (c *ChaosController) GetFault(ctx *gin.Context) {
 	namespace := ctx.Param("namespace")
 	name := ctx.Param("name")
@@ -147,6 +150,7 @@ func (c *ChaosController) GetFault(ctx *gin.Context) {
 	helper.SuccessWithData("success", "detail", detail)
 }
 
+// DeleteFault 删除指定名称的故障
 func (c *ChaosController) DeleteFault(ctx *gin.Context) {
 	namespace := ctx.Param("namespace")
 	name := ctx.Param("name")
@@ -173,6 +177,7 @@ func (c *ChaosController) DeleteFault(ctx *gin.Context) {
 	helper.Success("Chaos experiment deleted successfully")
 }
 
+// PauseFault 暂停指定名称的故障
 func (c *ChaosController) PauseFault(ctx *gin.Context) {
 	namespace := ctx.Param("namespace")
 	name := ctx.Param("name")
@@ -199,6 +204,7 @@ func (c *ChaosController) PauseFault(ctx *gin.Context) {
 	helper.Success("Chaos experiment paused successfully")
 }
 
+// ResumeFault 恢复指定名称的故障
 func (c *ChaosController) ResumeFault(ctx *gin.Context) {
 	namespace := ctx.Param("namespace")
 	name := ctx.Param("name")

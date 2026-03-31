@@ -1,11 +1,14 @@
 package strategies
 
+import "fmt"
+
 func buildSelector(selector interface{}) map[string]interface{} {
 	if selector == nil {
 		return map[string]interface{}{}
 	}
 
 	selectorMap, ok := selector.(map[string]interface{})
+	fmt.Printf("selectorMap:%v\n", selectorMap)
 	if !ok {
 		return map[string]interface{}{}
 	}

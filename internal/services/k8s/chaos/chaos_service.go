@@ -60,7 +60,7 @@ func (f *ChaosFactory) GetStrategy(faultType string) (chaosStrategies.FaultStrat
 func getResourceKind(faultType string) string {
 	switch faultType {
 	case "PodChaos":
-		return "podschaos"
+		return "podchaos"
 	case "NetworkChaos":
 		return "networkchaos"
 	case "IOChaos":
@@ -125,10 +125,11 @@ func (s *ChaosService) ListChaosExperiments(ctx context.Context, instanceID uint
 		return nil, fmt.Errorf("K8s client not initialized for instance %d", instanceID)
 	}
 
-	//factory := NewChaosFactory()
-
+	namespace := metav1.NamespaceAll
 	var results []k8s.ChaosExperimentListItem
-
+	if req.Namespace != "" && req.Namespace != "all" {
+		namespace = req.Namespace
+	}
 	types := []string{"PodChaos", "NetworkChaos", "IOChaos", "StressChaos"}
 	for _, t := range types {
 		if req.Type != "" && req.Type != "all" && req.Type != t {
@@ -140,8 +141,7 @@ func (s *ChaosService) ListChaosExperiments(ctx context.Context, instanceID uint
 			Version:  "v1alpha1",
 			Resource: getResourceKind(t),
 		}
-
-		list, err := dynamicClient.Resource(gvr).Namespace(req.Namespace).List(ctx, metav1.ListOptions{})
+		list, err := dynamicClient.Resource(gvr).Namespace(namespace).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			continue
 		}
