@@ -85,6 +85,18 @@ type HealthConfig struct {
 	Interval int    `mapstructure:"interval" yaml:"interval"`
 }
 
+// ai相关配置文件
+type AiConfig struct {
+	MCPConfig MCPConfig
+}
+
+type MCPConfig struct {
+	Enabled    bool   `mapstructure:"enabled"`
+	Url        string `mapstructure:"url"`
+	Token      string `mapstructure:"token"`
+	MaxRetries int    `mapstructure:"max_retries"`
+}
+
 // 应用配置
 type EncryptionConfig struct {
 	Key string `mapstructure:"key" yaml:"key"`
@@ -107,6 +119,7 @@ type AppConfig struct {
 	Kubernetes    KubernetesConfig    `mapstructure:"kubernetes" yaml:"kubernetes"`
 	Swagger       SwaggerConfig       `mapstructure:"swagger" yaml:"swagger"`
 	Health        HealthConfig        `mapstructure:"health" yaml:"health"`
+	AiConfig      AiConfig            `mapstructure:"ai"`
 	Encryption    EncryptionConfig    `mapstructure:"encryption" yaml:"encryption"`
 	FeiShuConfig  FeiShuConfig        `mapstructure:"feishu" yaml:"feishu"`
 }
@@ -190,6 +203,11 @@ func GetEncryptionKey() ([]byte, error) {
 		return nil, nil
 	}
 	return base64.StdEncoding.DecodeString(keyStr)
+}
+
+// GetAiConfig 获取ai配置文件
+func GetAiConfig() AiConfig {
+	return Config.AiConfig
 }
 
 // IsDebugMode 判断是否为调试模式
