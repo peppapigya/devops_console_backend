@@ -216,14 +216,16 @@ type ChaosNode struct {
 
 // PrepareEvictionRequest 准备演练节点驱逐请求
 type PrepareEvictionRequest struct {
-	NodeName       string `json:"nodeName" binding:"required"`       // 演练节点名称
-	Namespace      string `json:"namespace" binding:"required"`      // 目标命名空间
-	DeploymentName string `json:"deploymentName" binding:"required"` // 目标 Deployment 名
+	NodeName            string `json:"nodeName" binding:"required"`            // 演练节点名称
+	Namespace           string `json:"namespace" binding:"required"`           // 实验 CR 命名空间
+	DeploymentNamespace string `json:"deploymentNamespace" binding:"required"` // Deployment 所在命名空间
+	DeploymentName      string `json:"deploymentName" binding:"required"`      // 目标 Deployment 名
 }
 
 // CleanupEvictionRequest 清理演练环境请求
 type CleanupEvictionRequest struct {
-	NodeName       string `json:"nodeName" binding:"required"`
-	Namespace      string `json:"namespace" binding:"required"`
-	DeploymentName string `json:"deploymentName" binding:"required"`
+	NodeName            string `json:"nodeName" binding:"required"`
+	Namespace           string `json:"namespace" binding:"required"`
+	DeploymentNamespace string `json:"deploymentNamespace" binding:"required"`
+	DeploymentName      string `json:"deploymentName" binding:"required"`
 }
