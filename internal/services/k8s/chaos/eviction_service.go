@@ -376,20 +376,21 @@ func (s *EvictionService) PrepareEviction(ctx context.Context, instanceID uint, 
 	}
 
 	// Step 2: Patch Deployment（Toleration + NodeAffinity）
-	origSpecJSON, err := s.PatchDeploymentForChaos(ctx, instanceID, req.Namespace, req.DeploymentName, req.NodeName)
+	// 注意：使用 DeploymentNamespace（Deployment 实际所在的命名空间）
+	origSpecJSON, err := s.PatchDeploymentForChaos(ctx, instanceID, req.DeploymentNamespace, req.DeploymentName, req.NodeName)
 	if err != nil {
 		// 回滚 Taint
 		_ = s.UnTaintChaosNode(ctx, instanceID, req.NodeName)
 		return "", fmt.Errorf("Patch Deployment 失败: %w", err)
 	}
 
-	// Step 3: Evict Pod
-	if err := s.EvictPodsInDeployment(ctx, instanceID, req.Namespace, req.DeploymentName); err != nil {
+	// Step 3: Evict Pod（使用 DeploymentNamespace）
+	if err := s.EvictPodsInDeployment(ctx, instanceID, req.DeploymentNamespace, req.DeploymentName); err != nil {
 		return origSpecJSON, fmt.Errorf("驱逐 Pod 失败: %w", err)
 	}
 
-	// Step 4: 等待 Pod 在演练节点就绪
-	if err := s.WaitPodsOnChaosNode(ctx, instanceID, req.Namespace, req.DeploymentName, req.NodeName); err != nil {
+	// Step 4: 等待 Pod 在演练节点就绪（使用 DeploymentNamespace）
+	if err := s.WaitPodsOnChaosNode(ctx, instanceID, req.DeploymentNamespace, req.DeploymentName, req.NodeName); err != nil {
 		return origSpecJSON, fmt.Errorf("等待 Pod 迁移超时: %w", err)
 	}
 
@@ -398,13 +399,13 @@ func (s *EvictionService) PrepareEviction(ctx context.Context, instanceID uint, 
 
 // CleanupEviction 清理演练环境（回滚 Deployment → Evict → 去 Taint）
 func (s *EvictionService) CleanupEviction(ctx context.Context, instanceID uint, req *reqK8s.CleanupEvictionRequest, origSpecJSON string) error {
-	// Step 1: 回滚 Deployment spec
-	if err := s.RestoreDeployment(ctx, instanceID, req.Namespace, req.DeploymentName, origSpecJSON); err != nil {
+	// Step 1: 回滚 Deployment spec（使用 DeploymentNamespace）
+	if err := s.RestoreDeployment(ctx, instanceID, req.DeploymentNamespace, req.DeploymentName, origSpecJSON); err != nil {
 		logs.Info(map[string]interface{}{"err": err.Error()}, "回滚 Deployment 失败，继续清理")
 	}
 
-	// Step 2: 再次 Evict，让 Pod 回正常节点
-	if err := s.EvictPodsInDeployment(ctx, instanceID, req.Namespace, req.DeploymentName); err != nil {
+	// Step 2: 再次 Evict，让 Pod 回正常节点（使用 DeploymentNamespace）
+	if err := s.EvictPodsInDeployment(ctx, instanceID, req.DeploymentNamespace, req.DeploymentName); err != nil {
 		logs.Info(map[string]interface{}{"err": err.Error()}, "re-Evict Pod 失败，继续清理")
 	}
 
