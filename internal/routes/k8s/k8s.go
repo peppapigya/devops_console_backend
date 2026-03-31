@@ -1,6 +1,7 @@
 package k8s
 
 import (
+	"devops-console-backend/internal/routes/k8s/chaos"
 	"devops-console-backend/internal/routes/k8s/cluster"
 	"devops-console-backend/internal/routes/k8s/config"
 	"devops-console-backend/internal/routes/k8s/crd"
@@ -39,6 +40,10 @@ func RegisterK8sRoutes(apiGroup *gin.RouterGroup, db *gorm.DB) {
 	// 注册Node路由
 	nodeRoute := node.NewNodeRoute()
 	nodeRoute.RegisterSubRouter(apiGroup)
+
+	// 注册Chaos Mesh路由
+	chaosRoute := chaos.NewChaosRoute()
+	chaosRoute.RegisterSubRouter(apiGroup)
 
 	// 注册Deployment路由
 	deploymentRoute := deployment.NewDeploymentRoute()

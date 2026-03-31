@@ -17,10 +17,12 @@ import (
 )
 
 var (
-	k8sClients     map[uint]*kubernetes.Clientset
-	k8sClientsLock sync.RWMutex
-	configMap      map[uint]*rest.Config
-	k8sConfigLock  sync.RWMutex
+	k8sClients            map[uint]*kubernetes.Clientset
+	k8sClientsLock        sync.RWMutex
+	configMap             map[uint]*rest.Config
+	k8sConfigLock         sync.RWMutex
+	k8sDynamicClients     map[uint]dynamic.Interface // k8s提供的一个通用客户端，专门用于操作自定义资源
+	k8sDynamicClientsLock sync.RWMutex
 )
 
 // InitK8sClients 初始化所有K8s类型的客户端
@@ -28,8 +30,12 @@ func InitK8sClients() error {
 	k8sClientsLock.Lock()
 	defer k8sClientsLock.Unlock()
 
+	k8sDynamicClientsLock.Lock()
+	defer k8sDynamicClientsLock.Unlock()
+
 	k8sClients = make(map[uint]*kubernetes.Clientset)
 	configMap = make(map[uint]*rest.Config)
+	k8sDynamicClients = make(map[uint]dynamic.Interface)
 
 	// 查询所有kubernetes类型的实例
 	instanceRepo := NewInstanceRepository()
@@ -122,6 +128,16 @@ func InitK8sClients() error {
 			continue
 		}
 		k8sClients[instance.ID] = clientSet
+
+		k8sDynamicClient, err := dynamic.NewForConfig(restConfig)
+		if err != nil {
+			logs.Error(map[string]interface{}{
+				"instance_id": instance.ID,
+				"error":       err.Error(),
+			}, "创建k8s动态客户端失败")
+			continue
+		}
+		k8sDynamicClients[instance.ID] = k8sDynamicClient
 		logs.Info(map[string]interface{}{
 			"instance_id":   instance.ID,
 			"instance_name": instance.Name,
@@ -141,6 +157,14 @@ func GetK8sClient(instanceID uint) (*kubernetes.Clientset, bool) {
 	defer k8sClientsLock.RUnlock()
 
 	client, exists := k8sClients[instanceID]
+	return client, exists
+}
+
+// GetK8sDynamicClient 获取指定实例的动态客户端
+func GetK8sDynamicClient(instanceID uint) (dynamic.Interface, bool) {
+	k8sDynamicClientsLock.RLock()
+	defer k8sDynamicClientsLock.RUnlock()
+	client, exists := k8sDynamicClients[instanceID]
 	return client, exists
 }
 

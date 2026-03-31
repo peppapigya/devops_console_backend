@@ -90,6 +90,15 @@ type EncryptionConfig struct {
 	Key string `mapstructure:"key" yaml:"key"`
 }
 
+// 飞书相关配置
+type FeiShuConfig struct {
+	Enabled    bool   `mapstructure:"enabled" yaml:"enabled"`
+	WebHookUrl string `mapstructure:"webhook"`
+	Secret     string `mapstructure:"secret"`
+	AppId      string `mapstructure:"appId"`
+	AppSecret  string `mapstructure:"appSecret"`
+}
+
 type AppConfig struct {
 	Server        ServerConfig        `mapstructure:"server" yaml:"server"`
 	Database      DatabaseConfig      `mapstructure:"database" yaml:"database"`
@@ -99,6 +108,7 @@ type AppConfig struct {
 	Swagger       SwaggerConfig       `mapstructure:"swagger" yaml:"swagger"`
 	Health        HealthConfig        `mapstructure:"health" yaml:"health"`
 	Encryption    EncryptionConfig    `mapstructure:"encryption" yaml:"encryption"`
+	FeiShuConfig  FeiShuConfig        `mapstructure:"feishu" yaml:"feishu"`
 }
 
 // initLogConfig 初始化日志配置
@@ -222,11 +232,11 @@ func LoadConfig() error {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	// 手动绑定Docker Compose环境变量（无前缀）
-	viper.BindEnv("database.mysql.host", "DB_HOST")
-	viper.BindEnv("database.mysql.port", "DB_PORT")
-	viper.BindEnv("database.mysql.username", "DB_USER")
-	viper.BindEnv("database.mysql.password", "DB_PASSWORD")
-	viper.BindEnv("database.mysql.database", "DB_NAME")
+	_ = viper.BindEnv("database.mysql.host", "DB_HOST")
+	_ = viper.BindEnv("database.mysql.port", "DB_PORT")
+	_ = viper.BindEnv("database.mysql.username", "DB_USER")
+	_ = viper.BindEnv("database.mysql.password", "DB_PASSWORD")
+	_ = viper.BindEnv("database.mysql.database", "DB_NAME")
 
 	// 设置默认值
 	setDefaults()
