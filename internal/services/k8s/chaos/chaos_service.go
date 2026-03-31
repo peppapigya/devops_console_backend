@@ -272,8 +272,10 @@ func (s *ChaosService) setExperimentStatus(ctx context.Context, instanceID uint,
 func (s *ChaosService) convertToExperimentItem(obj *unstructured.Unstructured, faultType string) k8s.ChaosExperimentListItem {
 	annotations := obj.GetAnnotations()
 	labels := obj.GetLabels()
-	status, _, _ := unstructured.NestedString(obj.Object, "status", "phase")
+	fmt.Printf("object%v\n", obj.Object)
+	status := getChaosPhase(obj)
 
+	fmt.Printf("获取的状态%v,获取到的：%v", status, s.getStatus(annotations, status))
 	return k8s.ChaosExperimentListItem{
 		Name:        obj.GetName(),
 		Namespace:   obj.GetNamespace(),
@@ -283,6 +285,39 @@ func (s *ChaosService) convertToExperimentItem(obj *unstructured.Unstructured, f
 		CreatedAt:   obj.GetCreationTimestamp().Time,
 		Labels:      labels,
 		Annotations: annotations,
+	}
+}
+
+func getChaosPhase(obj *unstructured.Unstructured) string {
+	condMap := map[string]string{}
+	conditions, found, err := unstructured.NestedSlice(obj.Object, "status", "conditions")
+	if err == nil && found {
+		for _, c := range conditions {
+			m, ok := c.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			t, _, _ := unstructured.NestedString(m, "type")
+			s, _, _ := unstructured.NestedString(m, "status")
+			if t != "" {
+				condMap[t] = s
+			}
+		}
+	}
+	action, _, _ := unstructured.NestedString(obj.Object, "spec", "action")
+	switch {
+	case condMap["Paused"] == "True":
+		return "Paused"
+	case condMap["AllRecovered"] == "True":
+		return "Finished"
+	case action == "pod-kill" && condMap["AllInjected"] == "True":
+		return "Executed"
+	case condMap["AllInjected"] == "True":
+		return "Running"
+	case condMap["Selected"] == "True":
+		return "Selected"
+	default:
+		return "Unknown"
 	}
 }
 
