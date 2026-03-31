@@ -13,16 +13,16 @@ database:
 
   # MySQL配置
   mysql:
-#    host: "mysql"  # Docker容器中的服务名
-#    port: 3306
-#    username: "devops"  # Docker环境中的用户
-#    password: "devops123456"  # Docker环境中的密码
-#    database: "devops_console"
-#    host: "47.104.247.159"  # Docker容器中的服务名
-#    port: 8002
-#    username: "root"  # Docker环境中的用户
-#    password: "peppa-pig"  # Docker环境中的密码
-#    database: "devops_console"
+    #    host: "mysql"  # Docker容器中的服务名
+    #    port: 3306
+    #    username: "devops"  # Docker环境中的用户
+    #    password: "devops123456"  # Docker环境中的密码
+    #    database: "devops_console"
+    #    host: "47.104.247.159"  # Docker容器中的服务名
+    #    port: 8002
+    #    username: "root"  # Docker环境中的用户
+    #    password: "peppa-pig"  # Docker环境中的密码
+    #    database: "devops_console"
     host: "127.0.0.1"  # Docker容器中的服务名
     port: 3306
     username: "root"  # Docker环境中的用户
@@ -98,3 +98,11 @@ jwt:
 # 加密配置 (用于敏感数据如主机密码等)
 encryption:
   key: "So722DGlBzRASCG9so/Knfuy81cdhQ7gArgZjcJHvpQ="  # AES-256 key, base64 encoded, 32 bytes
+
+
+feishu:
+  webhook: "https://open.feishu.cn/open-apis/bot/v2/hook/xxx" # 飞书 webhook地址
+  secret: "" # 飞书 secret
+  appId: "" # 飞书 appId 机器人签名校验可能用
+  appSecret: "" # 飞书 appSecret 调用飞书开放平台 API 才用
+  enabled: true # 是否开启该功能

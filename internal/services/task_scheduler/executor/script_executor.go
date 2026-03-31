@@ -175,7 +175,7 @@ func (e *ScriptExecutor) executeRemote(ctx context.Context, execCtx *TaskExecuti
 			Duration: time.Since(startTime).Milliseconds(),
 		}
 	}
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	session, err := client.NewSession()
 	if err != nil {
@@ -186,7 +186,7 @@ func (e *ScriptExecutor) executeRemote(ctx context.Context, execCtx *TaskExecuti
 			Duration: time.Since(startTime).Milliseconds(),
 		}
 	}
-	defer session.Close()
+	defer func() { _ = session.Close() }()
 
 	var finalCmd string
 	switch scriptType {
