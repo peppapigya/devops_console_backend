@@ -5,37 +5,10 @@ import (
 	chaosService "devops-console-backend/internal/services/k8s/chaos"
 	"devops-console-backend/pkg/utils"
 	"devops-console-backend/pkg/utils/logs"
-	"fmt"
 	"strconv"
-	"sync"
 
 	"github.com/gin-gonic/gin"
 )
-
-// origSpecCache 临时缓存演练前的 Deployment 原始 spec（key: namespace/deployment）
-var (
-	origSpecCache   = make(map[string]string)
-	origSpecCacheMu sync.RWMutex
-)
-
-func setOrigSpec(namespace, deployment, spec string) {
-	origSpecCacheMu.Lock()
-	defer origSpecCacheMu.Unlock()
-	origSpecCache[namespace+"/"+deployment] = spec
-}
-
-func getOrigSpec(namespace, deployment string) (string, bool) {
-	origSpecCacheMu.RLock()
-	defer origSpecCacheMu.RUnlock()
-	v, ok := origSpecCache[namespace+"/"+deployment]
-	return v, ok
-}
-
-func deleteOrigSpec(namespace, deployment string) {
-	origSpecCacheMu.Lock()
-	defer origSpecCacheMu.Unlock()
-	delete(origSpecCache, namespace+"/"+deployment)
-}
 
 type ChaosController struct {
 	service         *chaosService.ChaosService
@@ -285,8 +258,9 @@ func (c *ChaosController) PrepareEviction(ctx *gin.Context) {
 		return
 	}
 
-	// 缓存原始 spec，供清理时使用
-	setOrigSpec(req.Namespace, req.DeploymentName, origSpecJSON)
+	// 现在我们使用 K8s Annotation 来存储，不需要保存在本地内存中了
+	// 返回的 origSpecJSON 在这里可以忽略或记录
+	_ = origSpecJSON
 
 	logs.Info(logData, "Prepare eviction success")
 	helper := utils.NewResponseHelper(ctx)
@@ -316,25 +290,15 @@ func (c *ChaosController) CleanupEviction(ctx *gin.Context) {
 		"deployment": req.DeploymentName,
 	}
 
-	origSpecJSON, ok := getOrigSpec(req.Namespace, req.DeploymentName)
-	if !ok {
-		logs.Error(logData, "orig spec not found in cache")
-		helper := utils.NewResponseHelper(ctx)
-		helper.BadRequest(fmt.Sprintf("未找到 %s/%s 的原始 spec，无法回滚", req.Namespace, req.DeploymentName))
-		return
-	}
-
 	logs.Info(logData, "Cleanup eviction start")
 
-	if err := c.evictionService.CleanupEviction(ctx, instanceID, &req, origSpecJSON); err != nil {
+	// 直接传空字符串作为备用 spec，服务内部会优先读取 Deployment Annotation 如果读不到才会报错
+	if err := c.evictionService.CleanupEviction(ctx, instanceID, &req, ""); err != nil {
 		logs.Error(logData, "Cleanup eviction failed: "+err.Error())
 		helper := utils.NewResponseHelper(ctx)
 		helper.InternalError("清理演练环境失败: " + err.Error())
 		return
 	}
-
-	// 清理缓存
-	deleteOrigSpec(req.Namespace, req.DeploymentName)
 
 	logs.Info(logData, "Cleanup eviction success")
 	helper := utils.NewResponseHelper(ctx)
