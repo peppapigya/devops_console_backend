@@ -120,9 +120,16 @@ func (s *EvictionService) UnTaintChaosNode(ctx context.Context, instanceID uint,
 	return nil
 }
 
+const origSpecAnnotationKey = "devops-console.io/chaos-orig-spec"
+
 // patchSpec is the structure used to patch Deployment spec
 type deploymentPatch struct {
-	Spec deploymentSpecPatch `json:"spec"`
+	Metadata *objectMetaPatch    `json:"metadata,omitempty"`
+	Spec     deploymentSpecPatch `json:"spec"`
+}
+
+type objectMetaPatch struct {
+	Annotations map[string]*string `json:"annotations,omitempty"`
 }
 
 type deploymentSpecPatch struct {
@@ -203,7 +210,14 @@ func (s *EvictionService) PatchDeploymentForChaos(ctx context.Context, instanceI
 		},
 	}
 
+	origSpecStr := string(origJSON)
+
 	patch := deploymentPatch{
+		Metadata: &objectMetaPatch{
+			Annotations: map[string]*string{
+				origSpecAnnotationKey: &origSpecStr,
+			},
+		},
 		Spec: deploymentSpecPatch{
 			Template: podTemplatePatch{
 				Spec: podSpecPatch{
@@ -239,12 +253,32 @@ func (s *EvictionService) RestoreDeployment(ctx context.Context, instanceID uint
 		return fmt.Errorf("K8s client not initialized for instance %d", instanceID)
 	}
 
+	deploy, err := client.AppsV1().Deployments(namespace).Get(ctx, deploymentName, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("获取 Deployment 失败: %w", err)
+	}
+
+	// 优先从 Annotation 中获取原始 spec
+	specJSONToUse := origSpecJSON
+	if deploy.Annotations != nil && deploy.Annotations[origSpecAnnotationKey] != "" {
+		specJSONToUse = deploy.Annotations[origSpecAnnotationKey]
+	}
+
+	if specJSONToUse == "" {
+		return fmt.Errorf("未找到原始 spec 记录（内存及 Annotation 均为空），无法回滚")
+	}
+
 	var origSpec podSpecPatch
-	if err := json.Unmarshal([]byte(origSpecJSON), &origSpec); err != nil {
+	if err := json.Unmarshal([]byte(specJSONToUse), &origSpec); err != nil {
 		return fmt.Errorf("反序列化原始 spec 失败: %w", err)
 	}
 
 	patch := deploymentPatch{
+		Metadata: &objectMetaPatch{
+			Annotations: map[string]*string{
+				origSpecAnnotationKey: nil, // 置为 nil 以删除该 annotation
+			},
+		},
 		Spec: deploymentSpecPatch{
 			Template: podTemplatePatch{
 				Spec: origSpec,
