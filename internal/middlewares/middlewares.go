@@ -37,8 +37,13 @@ func Authenticate(excludePaths ...string) gin.HandlerFunc {
 		}
 		token := c.GetHeader(common.TokenKey)
 		token, found := strings.CutPrefix(token, "Bearer ")
-		if token == "" && !found {
-			log.Print("token not found")
+		if !found && token == "" {
+			// 对于 SSE EventSource 请求，无法设置 Header，只能通过 query 传递 token
+			token = c.Query("token")
+		}
+
+		if token == "" {
+			log.Print("token not found,URL:", c.Request.URL.Path)
 			common.Fail(c, common.UNAUTHORIZED)
 			c.Abort()
 			return

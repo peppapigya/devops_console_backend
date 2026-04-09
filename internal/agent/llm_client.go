@@ -180,7 +180,42 @@ func buildToolParams() []openai.ChatCompletionToolUnionParam {
 			"required": []string{"host", "user", "password", "command", "risk_level", "description"},
 		},
 	}
+	reportFunc := shared.FunctionDefinitionParam{
+		Name:        "submit_diagnosis_report",
+		Description: openai.String("如果已经发现明确的错误原因或根因，必须调用此工具提交最终诊断报告。调用此工具表示排查结束。"),
+		Parameters: openai.FunctionParameters{
+			"type": "object",
+			"properties": map[string]interface{}{
+				"conclusion": map[string]interface{}{
+					"type":        "string",
+					"description": "问题总结（1-2句话）",
+				},
+				"root_cause": map[string]interface{}{
+					"type":        "string",
+					"description": "明确的根因详情",
+				},
+				"severity": map[string]interface{}{
+					"type": "string",
+					"enum": []string{"low", "medium", "high", "critical"},
+				},
+				"fixed": map[string]interface{}{
+					"type":        "boolean",
+					"description": "是否已经在刚才的动作中完成了修复",
+				},
+				"fix_summary": map[string]interface{}{
+					"type":        "string",
+					"description": "执行了哪些具体命令进行的修复",
+				},
+				"recommendation": map[string]interface{}{
+					"type":        "string",
+					"description": "后续的改进建议",
+				},
+			},
+			"required": []string{"conclusion", "root_cause", "severity", "fixed"},
+		},
+	}
 	return []openai.ChatCompletionToolUnionParam{
 		openai.ChatCompletionFunctionTool(sshFunc),
+		openai.ChatCompletionFunctionTool(reportFunc),
 	}
 }

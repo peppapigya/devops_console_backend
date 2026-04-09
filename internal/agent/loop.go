@@ -79,6 +79,65 @@ func RunAgentLoop(
 		// ══════════════════════════════════════════════════
 		if len(llmResp.ToolCalls) > 0 {
 			for _, tc := range llmResp.ToolCalls {
+				if tc.Name == "submit_diagnosis_report" {
+					// LLM 通过工具调用主动提交了最终结论
+					conclusionStr, _ := json.Marshal(tc.Arguments)
+					// 持久化 assistant 发出的结论信息
+					msgNow := time.Now()
+					_ = msgMapper.BatchCreate([]*model.SessionMessage{
+						{SessionID: sessionID, Role: "assistant", Content: string(conclusionStr), CreatedAt: &msgNow},
+					})
+
+					// 提取关键字段
+					args := tc.Arguments
+					conclusion, _ := args["conclusion"].(string)
+					rootCause, _ := args["root_cause"].(string)
+					severity, _ := args["severity"].(string)
+					if severity == "" {
+						severity = "medium"
+					}
+
+					// 更新 session 分析字段
+					_ = sessionMapper.UpdateFields(sessionID, map[string]interface{}{
+						"analysis":   conclusion,
+						"root_cause": rootCause,
+						"severity":   severity,
+						"confidence": 0.95,
+					})
+
+					// 推送计划摘要（前端展示最终报告）
+					hub.Publish(repair.SSEEvent{
+						Type:      repair.EventPlan,
+						SessionID: sessionID,
+						Payload: repair.PlanPayload{
+							Analysis:   conclusion,
+							RootCause:  rootCause,
+							Severity:   severity,
+							Confidence: 0.95,
+						},
+					})
+
+					// 正常完成
+					actions, _ := actionMapper.GetBySessionID(sessionID)
+					completed := 0
+					for _, a := range actions {
+						if a.Status == "success" {
+							completed++
+						}
+					}
+					finAt := time.Now()
+					_ = sessionMapper.UpdateFields(sessionID, map[string]interface{}{
+						"status":      "success",
+						"finished_at": &finAt,
+					})
+					hub.PublishDone(sessionID, repair.DonePayload{
+						Status:           "success",
+						CompletedActions: completed,
+						TotalActions:     len(actions),
+					})
+					return nil // 退出 Agent 循环
+				}
+
 				if tc.Name != "execute_ssh" {
 					llmClient.AddToolResult(tc.ID, fmt.Sprintf(`{"error":"未知工具: %s"}`, tc.Name))
 					continue
@@ -247,8 +306,14 @@ func RunAgentLoop(
 				{SessionID: sessionID, Role: "assistant", Content: llmResp.Content, CreatedAt: &msgNow},
 			})
 
-			// 解析最终报告
-			conclusion := parseFinalConclusion(llmResp.Content)
+			// 解析最终报告 (兼容不支持或未触发 tool call 的备用解析)
+			var conclusion finalConclusion
+			_ = json.Unmarshal([]byte(llmResp.Content), &conclusion)
+			if conclusion.RootCause == "" {
+				conclusion.Conclusion = llmResp.Content
+				conclusion.RootCause = "通过输出日志推测"
+				conclusion.Severity = "medium"
+			}
 
 			// 更新 session 分析字段
 			_ = sessionMapper.UpdateFields(sessionID, map[string]interface{}{
