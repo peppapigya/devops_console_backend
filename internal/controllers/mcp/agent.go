@@ -5,6 +5,7 @@ import (
 	"devops-console-backend/internal/dal/mapper"
 	"devops-console-backend/internal/services/repair"
 	"devops-console-backend/pkg/configs"
+	"devops-console-backend/pkg/utils"
 	"io"
 	"net/http"
 	"strconv"
@@ -54,31 +55,29 @@ func NewMCPAgentControllerFromDB() *MCPAgentController {
 // POST /api/v1/mcp/session — 创建 Session，立即返回 session_id
 // ──────────────────────────────────────────────────────────────
 func (ctrl *MCPAgentController) CreateSession(c *gin.Context) {
+	helper := utils.NewResponseHelper(c)
 	aiCfg := configs.GetAiConfig().MCPConfig
 	if !aiCfg.Enabled {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "AI 功能未启用"})
+		helper.BadRequest("AI 功能未启用")
 		return
 	}
 
 	var req repair.CreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "参数解析失败: " + err.Error()})
+		helper.BadRequest("参数解析失败: " + err.Error())
 		return
 	}
 
 	sessionID, err := ctrl.sessionSvc.CreateSession(req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "创建 session 失败: " + err.Error()})
+		helper.InternalError("创建 session 失败: " + err.Error())
 		return
 	}
 
-	// 异步启动 MCP Agent 循环（注入 agent.RunAgentLoop 函数）
+	// 异步启动 MCP Agent 循环
 	ctrl.sessionSvc.StartAsync(sessionID, req, ctrl.agentCfg, agent.RunAgentLoop)
 
-	c.JSON(http.StatusOK, gin.H{
-		"data":    gin.H{"session_id": sessionID},
-		"message": "success",
-	})
+	helper.Success("success", map[string]interface{}{"session_id": sessionID})
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -133,11 +132,12 @@ func (ctrl *MCPAgentController) StreamSession(c *gin.Context) {
 // POST /api/v1/mcp/session/:id/action/:actionId/approve
 // ──────────────────────────────────────────────────────────────
 func (ctrl *MCPAgentController) ApproveAction(c *gin.Context) {
+	helper := utils.NewResponseHelper(c)
 	sessionID := c.Param("id")
 	actionIDStr := c.Param("actionId")
 	actionID, err := strconv.ParseUint(actionIDStr, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "actionId 格式错误"})
+		helper.BadRequest("actionId 格式错误")
 		return
 	}
 
@@ -148,16 +148,17 @@ func (ctrl *MCPAgentController) ApproveAction(c *gin.Context) {
 
 	ok := repair.ConfirmAction(sessionID, actionID, body.Approved)
 	if !ok {
-		c.JSON(http.StatusNotFound, gin.H{"message": "未找到等待确认的动作，可能已超时"})
+		helper.NotFound("未找到等待确认的动作，可能已超时")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "success"})
+	helper.Success("success")
 }
 
 // ──────────────────────────────────────────────────────────────
 // POST /api/v1/mcp/session/:id/pause
 // ──────────────────────────────────────────────────────────────
 func (ctrl *MCPAgentController) PauseSession(c *gin.Context) {
+	helper := utils.NewResponseHelper(c)
 	sessionID := c.Param("id")
 	gdb := configs.GORMDB
 	actionMapper := mapper.NewRepairActionMapper(gdb)
@@ -169,13 +170,14 @@ func (ctrl *MCPAgentController) PauseSession(c *gin.Context) {
 	}
 	sessionMapper := mapper.NewRepairSessionMapper(gdb)
 	_ = sessionMapper.UpdateStatus(sessionID, "paused")
-	c.JSON(http.StatusOK, gin.H{"message": "已请求暂停"})
+	helper.Success("已请求暂停")
 }
 
 // ──────────────────────────────────────────────────────────────
 // GET /api/v1/mcp/session/list — 历史 session 列表
 // ──────────────────────────────────────────────────────────────
 func (ctrl *MCPAgentController) ListSessions(c *gin.Context) {
+	helper := utils.NewResponseHelper(c)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 
@@ -183,19 +185,17 @@ func (ctrl *MCPAgentController) ListSessions(c *gin.Context) {
 	sessionMapper := mapper.NewRepairSessionMapper(gdb)
 	total, list, err := sessionMapper.ListPage(page, pageSize)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"message": "查询失败: " + err.Error()})
+		helper.InternalError("查询失败: " + err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"data":    gin.H{"list": list, "total": total},
-		"message": "success",
-	})
+	helper.Success("success", map[string]interface{}{"list": list, "total": total})
 }
 
 // ──────────────────────────────────────────────────────────────
 // GET /api/v1/mcp/session/:id — session 详情
 // ──────────────────────────────────────────────────────────────
 func (ctrl *MCPAgentController) GetSession(c *gin.Context) {
+	helper := utils.NewResponseHelper(c)
 	sessionID := c.Param("id")
 	gdb := configs.GORMDB
 	sessionMapper := mapper.NewRepairSessionMapper(gdb)
@@ -203,13 +203,10 @@ func (ctrl *MCPAgentController) GetSession(c *gin.Context) {
 
 	session, err := sessionMapper.GetByID(sessionID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "session 不存在"})
+		helper.NotFound("session 不存在")
 		return
 	}
 	actions, _ := actionMapper.GetBySessionID(sessionID)
 
-	c.JSON(http.StatusOK, gin.H{
-		"data":    gin.H{"session": session, "actions": actions},
-		"message": "success",
-	})
+	helper.Success("success", map[string]interface{}{"session": session, "actions": actions})
 }
