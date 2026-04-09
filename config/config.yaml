@@ -21,12 +21,12 @@ database:
     #    host: "47.104.247.159"  # Docker容器中的服务名
     #    port: 8002
     #    username: "root"  # Docker环境中的用户
-    #    password: "peppa-pig"  # Docker环境中的密码
+    #    password: "peppa"  # Docker环境中的密码
     #    database: "devops_console"
     host: "127.0.0.1"  # Docker容器中的服务名
     port: 3306
     username: "root"  # Docker环境中的用户
-    password: "Wjk990921"  # Docker环境中的密码
+    password: "123456"  # Docker环境中的密码
     database: "devops"
     charset: "utf8mb4"
     parse_time: true
@@ -80,7 +80,10 @@ ai:
     url: "http://127.0.0.1:8080"
     token: "" # apikey
     max_retries: 3
-
+    llm_api_key: "sk-50d4a2672xxxxxxxxxxxxxxxx"
+    llm_base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    llm_model: "glm-4.7"
+    MaxRounds: 10
 jwt:
   secret: "n02y2Zqf4eL0hZ4xjQH9w1zDk1w5FqMnc9R+N8T1v2E="
   expire-time: 3600 # 单位为秒

@@ -87,14 +87,19 @@ type HealthConfig struct {
 
 // ai相关配置文件
 type AiConfig struct {
-	MCPConfig MCPConfig
+	MCPConfig MCPConfig `mapstructure:"mcp"`
 }
 
 type MCPConfig struct {
 	Enabled    bool   `mapstructure:"enabled"`
-	Url        string `mapstructure:"url"`
-	Token      string `mapstructure:"token"`
+	Url        string `mapstructure:"url"`   // mcp-agent 工具服务器地址
+	Token      string `mapstructure:"token"` // mcp-agent 认证 token
 	MaxRetries int    `mapstructure:"max_retries"`
+	// LLM 直连配置（Backend 作为 Host 直接调用通义千问）
+	LLMApiKey  string `mapstructure:"llm_api_key"`
+	LLMBaseUrl string `mapstructure:"llm_base_url"` // 如: https://dashscope.aliyuncs.com/compatible-mode/v1
+	LLMModel   string `mapstructure:"llm_model"`    // 如: qwen-plus
+	MaxRounds  int    `mapstructure:"max_rounds"`   // Agent 最大循环轮数，0 表示默认 10
 }
 
 // 应用配置

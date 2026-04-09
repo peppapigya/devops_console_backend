@@ -12,6 +12,7 @@ import (
 	"devops-console-backend/internal/routes/es/shard"
 	"devops-console-backend/internal/routes/helm"
 	"devops-console-backend/internal/routes/k8s"
+	mcpRoute "devops-console-backend/internal/routes/mcp"
 	"devops-console-backend/internal/routes/monitor"
 	"devops-console-backend/internal/routes/system"
 	"devops-console-backend/internal/routes/task_scheduler"
@@ -49,5 +50,8 @@ func RegisterRouters(r *gin.Engine, db *gorm.DB) {
 
 		// 任务调度模块
 		task_scheduler.RegisterTaskSchedulerRouters(apiGroup, db)
+
+		// MCP 根因分析与修复模块
+		mcpRoute.RegisterMCPRouters(apiGroup, db)
 	}
 }
