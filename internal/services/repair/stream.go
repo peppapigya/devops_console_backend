@@ -56,6 +56,8 @@ type ActionBrief struct {
 type ActionStartPayload struct {
 	ActionID    uint64 `json:"action_id"`
 	ActionOrder int    `json:"action_order"`
+	ToolName    string `json:"tool_name"`
+	Thought     string `json:"thought"`
 	Description string `json:"description"`
 	Command     string `json:"command"`
 	Target      string `json:"target"`

@@ -136,6 +136,10 @@ func buildToolParams() []openai.ChatCompletionToolUnionParam {
 		Parameters: openai.FunctionParameters{
 			"type": "object",
 			"properties": map[string]interface{}{
+				"thought": map[string]interface{}{
+					"type":        "string",
+					"description": "必须填写！在确实要执行该命令前，先写下你当前的推理过程：你看到了什么现象？你为什么认为需要执行这条语句？你的预期是什么？",
+				},
 				"host": map[string]interface{}{
 					"type":        "string",
 					"description": "目标主机 IP 地址或域名",
@@ -177,7 +181,7 @@ func buildToolParams() []openai.ChatCompletionToolUnionParam {
 					"description": "该命令的用途说明（将显示给用户）",
 				},
 			},
-			"required": []string{"host", "user", "password", "command", "risk_level", "description"},
+			"required": []string{"thought", "host", "user", "password", "command", "risk_level", "description"},
 		},
 	}
 	reportFunc := shared.FunctionDefinitionParam{
@@ -186,6 +190,10 @@ func buildToolParams() []openai.ChatCompletionToolUnionParam {
 		Parameters: openai.FunctionParameters{
 			"type": "object",
 			"properties": map[string]interface{}{
+				"thought": map[string]interface{}{
+					"type":        "string",
+					"description": "必须填写！你是基于什么客观证据推导出这些结论并决定结束排查的？（详细推理过程）",
+				},
 				"conclusion": map[string]interface{}{
 					"type":        "string",
 					"description": "问题总结（1-2句话）",
@@ -211,7 +219,7 @@ func buildToolParams() []openai.ChatCompletionToolUnionParam {
 					"description": "后续的改进建议",
 				},
 			},
-			"required": []string{"conclusion", "root_cause", "severity", "fixed"},
+			"required": []string{"thought", "conclusion", "root_cause", "severity", "fixed"},
 		},
 	}
 	return []openai.ChatCompletionToolUnionParam{

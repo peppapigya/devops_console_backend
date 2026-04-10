@@ -144,7 +144,7 @@ func RunAgentLoop(
 				}
 
 				// 提取 SSH 参数
-				toolReq, riskLevel, description, extractErr := extractSSHParams(tc.Arguments, logHost, creds)
+				toolReq, riskLevel, description, thought, extractErr := extractSSHParams(tc.Arguments, logHost, creds)
 				if extractErr != nil {
 					llmClient.AddToolResult(tc.ID, fmt.Sprintf(`{"error":"%s"}`, extractErr.Error()))
 					continue
@@ -158,6 +158,7 @@ func RunAgentLoop(
 					SessionID:   sessionID,
 					ActionOrder: actionOrder,
 					Description: description,
+					Thought:     thought,
 					Command:     toolReq.Command,
 					Cwd:         toolReq.Cwd,
 					Target:      toolReq.Host,
@@ -215,6 +216,8 @@ func RunAgentLoop(
 					Payload: repair.ActionStartPayload{
 						ActionID:    action.ID,
 						ActionOrder: actionOrder,
+						ToolName:    tc.Name,
+						Thought:     thought,
 						Description: description,
 						Command:     toolReq.Command,
 						Target:      toolReq.Host,
@@ -370,7 +373,7 @@ func RunAgentLoop(
 // 内部辅助函数
 // ────────────────────────────────────────────────────────────────────
 
-func extractSSHParams(args map[string]interface{}, defaultHost string, creds repair.AgentSSHCreds) (ToolCallRequest, string, string, error) {
+func extractSSHParams(args map[string]interface{}, defaultHost string, creds repair.AgentSSHCreds) (ToolCallRequest, string, string, string, error) {
 	host, _ := args["host"].(string)
 	if host == "" {
 		host = defaultHost
@@ -385,7 +388,7 @@ func extractSSHParams(args map[string]interface{}, defaultHost string, creds rep
 	}
 	command, _ := args["command"].(string)
 	if command == "" {
-		return ToolCallRequest{}, "", "", fmt.Errorf("command 参数不能为空")
+		return ToolCallRequest{}, "", "", "", fmt.Errorf("command 参数不能为空")
 	}
 
 	cwd, _ := args["cwd"].(string)
@@ -414,6 +417,8 @@ func extractSSHParams(args map[string]interface{}, defaultHost string, creds rep
 		}
 	}
 
+	thought, _ := args["thought"].(string)
+
 	return ToolCallRequest{
 		Host:     host,
 		Port:     port,
@@ -422,7 +427,7 @@ func extractSSHParams(args map[string]interface{}, defaultHost string, creds rep
 		Command:  command,
 		Cwd:      cwd,
 		Timeout:  timeout,
-	}, riskLevel, description, nil
+	}, riskLevel, description, thought, nil
 }
 
 type finalConclusion struct {
