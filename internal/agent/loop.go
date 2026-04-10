@@ -59,6 +59,8 @@ func RunAgentLoop(
 	})
 
 	actionOrder := 0
+	var lastActionSuccess bool = true
+	var lastActionOutput string = ""
 
 	for round := 0; round < maxRounds; round++ {
 		// 推送 "AI 正在思考"
@@ -80,8 +82,19 @@ func RunAgentLoop(
 		if len(llmResp.ToolCalls) > 0 {
 			for _, tc := range llmResp.ToolCalls {
 				if tc.Name == "submit_diagnosis_report" {
+					args := tc.Arguments
+					fixed, _ := args["fixed"].(bool)
+
+					// Guardrail：拦截 AI 的“修复成功”幻觉谎报
+					if fixed && !lastActionSuccess {
+						logger.Warnf("AI 正在说谎，试图提交 fixed:true，但上一条命令失败。进行拦截打回。")
+						errMsg := fmt.Sprintf(`{"error":"【系统强力拦截】你声称已经修复成功（fixed: true），但你上一次执行的命令（验证命令）明明执行失败了！真实输出是：\n%s\n你是基于什么幻觉编造出验证通过的？严禁瞎编结果！请仔细研读上述真实的报错内容继续修复。如果实在无法修复，必须设置 fixed: false！"}`, lastActionOutput)
+						llmClient.AddToolResult(tc.ID, errMsg)
+						continue // 打回给大模型让它反思
+					}
+
 					// LLM 通过工具调用主动提交了最终结论
-					conclusionStr, _ := json.Marshal(tc.Arguments)
+					conclusionStr, _ := json.Marshal(args)
 					// 持久化 assistant 发出的结论信息
 					msgNow := time.Now()
 					_ = msgMapper.BatchCreate([]*model.SessionMessage{
@@ -89,7 +102,7 @@ func RunAgentLoop(
 					})
 
 					// 提取关键字段
-					args := tc.Arguments
+					args = tc.Arguments
 					conclusion, _ := args["conclusion"].(string)
 					rootCause, _ := args["root_cause"].(string)
 					severity, _ := args["severity"].(string)
@@ -251,6 +264,8 @@ func RunAgentLoop(
 				if !toolResult.Success {
 					status = "failed"
 				}
+				lastActionSuccess = toolResult.Success
+				lastActionOutput = toolResult.Output + "\n" + toolResult.Stderr
 				durationMs := int(toolResult.DurationMs)
 				_ = actionMapper.UpdateFields(action.ID, map[string]interface{}{
 					"status":      status,
