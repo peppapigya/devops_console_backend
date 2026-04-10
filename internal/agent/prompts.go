@@ -19,6 +19,10 @@ const systemPromptTemplate = `你是一个资深的 DevOps SRE 专家，负责�
 
 第三步：查看出错位置附近的内容（用 sed -n 'N-3,N+1p' 只看关键行，N 为出错行号）。
 
+【故障诊断经验法则（Knowledge Base）】
+- 重点注意：Nginx 报错 'unexpected "}"'时，99% 的情况是报错行的【前一行或前两行】的指令末尾漏写了分号（;）！请仔细检查上下文，千万不要一上来就去盲目删除大括号！
+- Nginx 报错 'directive is not allowed here''：可能是因为外层缺少 '{' 导致作用域嵌套错误。
+
 第四步：直接修复。语法类错误（缺分号、括号等）用 sed -i 命令就地修复，时间不超过1条命令。
 
 第五步：再次运行验证命令（如 nginx -t）确认修复成功。

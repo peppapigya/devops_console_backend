@@ -315,63 +315,25 @@ func RunAgentLoop(
 		}
 
 		// ══════════════════════════════════════════════════
-		// Case 2：LLM 输出最终结论
+		// Case 2：LLM 输出纯文本（逃避工具调用）
 		// ══════════════════════════════════════════════════
-		if llmResp.IsFinish && llmResp.Content != "" {
-			// 持久化 assistant 最终回复
+		if llmResp.Content != "" {
+			// 持久化 assistant 纯文本回复
 			msgNow := time.Now()
 			_ = msgMapper.BatchCreate([]*model.SessionMessage{
 				{SessionID: sessionID, Role: "assistant", Content: llmResp.Content, CreatedAt: &msgNow},
 			})
 
-			// 解析最终报告 (兼容不支持或未触发 tool call 的备用解析)
-			var conclusion finalConclusion
-			_ = json.Unmarshal([]byte(llmResp.Content), &conclusion)
-			if conclusion.RootCause == "" {
-				conclusion.Conclusion = llmResp.Content
-				conclusion.RootCause = "通过输出日志推测"
-				conclusion.Severity = "medium"
-			}
+			// 强制打回，要求使用工具
+			logger.Warnf("AI 逃避调用工具，输出纯文本，拦截指令：\n%s", llmResp.Content)
+			warningMsg := "【系统强力拦截】你违反了协议配置：不允许只回复纯文本而不调用底层工具！如果你想执行命令，请调用 `execute_ssh`；如果你认为排查已经结束，请务必调用 `submit_diagnosis_report` 工具正式提交结论！如果由于命令持续报错无法修复，请主动调用 `submit_diagnosis_report` 并传入 fixed:false！"
+			llmClient.AddUserMessage(warningMsg)
 
-			// 更新 session 分析字段
-			_ = sessionMapper.UpdateFields(sessionID, map[string]interface{}{
-				"analysis":   llmResp.Content,
-				"root_cause": conclusion.RootCause,
-				"severity":   conclusion.Severity,
-				"confidence": 0.9,
+			msgNow2 := time.Now()
+			_ = msgMapper.BatchCreate([]*model.SessionMessage{
+				{SessionID: sessionID, Role: "user", Content: warningMsg, CreatedAt: &msgNow2},
 			})
-
-			// 推送计划摘要（前端展示最终报告）
-			hub.Publish(repair.SSEEvent{
-				Type:      repair.EventPlan,
-				SessionID: sessionID,
-				Payload: repair.PlanPayload{
-					Analysis:   conclusion.Conclusion,
-					RootCause:  conclusion.RootCause,
-					Severity:   conclusion.Severity,
-					Confidence: 0.9,
-				},
-			})
-
-			// 正常完成
-			actions, _ := actionMapper.GetBySessionID(sessionID)
-			completed := 0
-			for _, a := range actions {
-				if a.Status == "success" {
-					completed++
-				}
-			}
-			finAt := time.Now()
-			_ = sessionMapper.UpdateFields(sessionID, map[string]interface{}{
-				"status":      "success",
-				"finished_at": &finAt,
-			})
-			hub.PublishDone(sessionID, repair.DonePayload{
-				Status:           "success",
-				CompletedActions: completed,
-				TotalActions:     len(actions),
-			})
-			return nil
+			continue
 		}
 
 		// LLM 既无工具调用也无合法内容，降级处理
