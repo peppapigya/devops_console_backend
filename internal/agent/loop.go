@@ -41,6 +41,12 @@ type toolExecution struct {
 	thought     string
 }
 
+type validationBlocker struct {
+	rawOutput string
+	line      string
+	summary   string
+}
+
 func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel string, creds repair.AgentSSHCreds, cfg repair.AgentLoopCfg, sessionMapper *mapper.RepairSessionMapper, msgMapper *mapper.SessionMessageMapper, actionMapper *mapper.RepairActionMapper, hub *repair.StreamHub) error {
 	if err := sessionMapper.UpdateStatus(sessionID, "analyzing"); err != nil {
 		logger.Warnf("update session status failed: %v", err)
@@ -75,6 +81,7 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 	serviceResourceHit := false
 	postWriteReadRequired := false
 	lastWrittenFile := ""
+	currentValidationBlocker := validationBlocker{}
 
 	for round := 0; round < maxRounds; round++ {
 		hub.Publish(repair.SSEEvent{
@@ -278,6 +285,13 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 				lastActionSuccess = toolResult.Success
 				rawActionOutput := strings.TrimSpace(toolResult.Output + "\n" + toolResult.Stderr)
 				lastActionOutput = rawActionOutput
+				if exec.name == "validate_nginx_config" {
+					if toolResult.Success {
+						currentValidationBlocker = validationBlocker{}
+					} else {
+						currentValidationBlocker = parseValidationBlocker(rawActionOutput)
+					}
+				}
 				if len(lastActionOutput) > 1200 {
 					lastActionOutput = lastActionOutput[:1200] + "..."
 				}
@@ -309,14 +323,11 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 				resultJSON, _ := json.Marshal(compacted)
 				llmClient.AddToolResult(tc.ID, string(resultJSON))
 
-				if exec.name == "read_service_resource" && toolResult.Success && strings.EqualFold(strings.TrimSpace(logService), "nginx") {
-					llmClient.AddUserMessage("你已命中 nginx 专属知识资源。该资源明确要求：遇到 unexpected \"}\" 时，优先检查上一行是否缺少分号，绝对不要把删除右大括号作为默认修复动作。下一步请读取带行号的文件内容，定位缺少分号的具体指令。")
+				if exec.name == "read_service_resource" && toolResult.Success {
+					llmClient.AddUserMessage("你已命中当前服务的专属知识资源。下一步请优先遵循 resource 中的服务专属排障规则继续取证和修复，不要自行脑补额外的服务语法规则。")
 				}
 				if exec.name == "read_service_resource" && !toolResult.Success {
 					llmClient.AddUserMessage("当前服务没有命中的知识资源。请继续现场取证；如有相关通用主题，也可以改用 read_knowledge_base 读取知识库，再结合命令输出完成诊断。")
-				}
-				if exec.name == "inspect_file_snippet" && strings.EqualFold(strings.TrimSpace(logService), "nginx") && seemsMissingSemicolonBeforeBrace(toolResult.Output) {
-					llmClient.AddUserMessage("根据刚才的文件回读，问题更像是右大括号上一条 nginx 指令缺少分号，而不是多余的右大括号。请优先补分号，不要删除 }。")
 				}
 				if exec.name == "inspect_file_snippet" {
 					llmClient.AddUserMessage("如果下一步需要调用 replace_file_content，search 必须直接使用刚刚回读结果里的完整原始文本片段，不要凭推测改写目标行，也不要自行变更其他行。")
@@ -325,12 +336,18 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 					llmClient.AddUserMessage("nginx 配置验证已成功。下一步必须调用 submit_diagnosis_report 提交最终结论，不要继续重复取证。")
 				} else if exec.name == "validate_nginx_config" && !toolResult.Success {
 					llmClient.AddUserMessage("配置验证失败，说明修复尚未生效。不要继续重启服务，也不要声称已修复成功；请重新读取文件内容，确认实际文件与错误行，再调整修复方案。")
+					if currentValidationBlocker.summary != "" {
+						llmClient.AddUserMessage(fmt.Sprintf("最新验证错误已经变化，当前阻塞问题是：%s。请先围绕这个新错误继续取证和修复，不要继续沿用旧报错的修复思路。", currentValidationBlocker.summary))
+					}
 				}
 				if exec.name == "replace_file_content" && !toolResult.Success {
 					llmClient.AddUserMessage("replace_file_content 返回失败时，文件当前内容大概率没有按预期改动。尤其当错误是 search text not found 时，必须重新读取文件，并使用精确匹配的原文后再尝试修改。")
 				}
 				if exec.name == "replace_file_content" && toolResult.Success {
 					llmClient.AddUserMessage("文件修改已执行。下一步必须先重新读取同一文件确认实际改动结果，再执行验证命令；不要直接提交结论，也不要直接重启服务。")
+				}
+				if exec.name == "inspect_file_snippet" && currentValidationBlocker.summary != "" {
+					llmClient.AddUserMessage(fmt.Sprintf("当前仍有未解决的最新验证错误：%s。请基于刚刚回读的原文，优先修复这个中间阻塞问题，再继续处理最终目标。", currentValidationBlocker.summary))
 				}
 
 				msgNow := time.Now()
@@ -688,21 +705,23 @@ func sameFile(left, right string) bool {
 	return strings.EqualFold(l, r)
 }
 
-func seemsMissingSemicolonBeforeBrace(content string) bool {
-	lines := strings.Split(content, "\n")
-	for i := 0; i < len(lines)-1; i++ {
-		current := strings.TrimSpace(lines[i])
-		next := strings.TrimSpace(lines[i+1])
-		if current == "" || strings.HasPrefix(current, "#") {
+func parseValidationBlocker(output string) validationBlocker {
+	lines := strings.Split(strings.TrimSpace(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
 			continue
 		}
-		if next != "}" {
-			continue
+		if strings.Contains(line, "nginx: [emerg]") {
+			blocker := validationBlocker{rawOutput: output, summary: line}
+			if idx := strings.LastIndex(line, ":"); idx != -1 && idx < len(line)-1 {
+				lineNo := strings.TrimSpace(line[idx+1:])
+				if _, err := strconv.Atoi(lineNo); err == nil {
+					blocker.line = lineNo
+				}
+			}
+			return blocker
 		}
-		if strings.HasSuffix(current, ";") || strings.HasSuffix(current, "{") || strings.HasSuffix(current, "}") {
-			continue
-		}
-		return true
 	}
-	return false
+	return validationBlocker{rawOutput: output, summary: strings.TrimSpace(output)}
 }
