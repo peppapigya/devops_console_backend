@@ -100,20 +100,20 @@ func buildToolParams() []openai.ChatCompletionToolUnionParam {
 	commonMeta := map[string]interface{}{
 		"thought": map[string]interface{}{
 			"type":        "string",
-			"description": "Reason about what evidence you already have, why this tool is needed, and what you expect to learn.",
+			"description": "中文推理说明：已掌握哪些证据、为何需要该工具、期望获得什么信息。",
 		},
 		"description": map[string]interface{}{
 			"type":        "string",
-			"description": "Short user-facing summary of this step.",
+			"description": "中文步骤摘要：面向用户展示本步骤要做什么。",
 		},
 		"risk_level": map[string]interface{}{
 			"type":        "string",
-			"description": "Risk level for the action.",
+			"description": "操作风险等级。",
 			"enum":        []string{"low", "medium", "high"},
 		},
 		"risk_reason": map[string]interface{}{
 			"type":        "string",
-			"description": "Why this action has the chosen risk level.",
+			"description": "中文说明：为什么该操作是这个风险等级。",
 		},
 		"host":     map[string]interface{}{"type": "string"},
 		"port":     map[string]interface{}{"type": "integer", "default": 22},
@@ -145,7 +145,7 @@ func buildToolParams() []openai.ChatCompletionToolUnionParam {
 
 	reportFunc := openai.ChatCompletionFunctionTool(shared.FunctionDefinitionParam{
 		Name:        "submit_diagnosis_report",
-		Description: openai.String("Submit the final RCA report. This is the only valid way to end the investigation."),
+		Description: openai.String("提交最终 RCA 报告。这是结束本次排障的唯一合法方式。报告字段请使用中文。"),
 		Parameters: openai.FunctionParameters{
 			"type": "object",
 			"properties": map[string]interface{}{
@@ -165,31 +165,31 @@ func buildToolParams() []openai.ChatCompletionToolUnionParam {
 	})
 
 	return []openai.ChatCompletionToolUnionParam{
-		toolWithSSH("inspect_service_status", "Inspect the runtime status of a Linux service.", map[string]interface{}{
+		toolWithSSH("inspect_service_status", "检查 Linux 服务运行状态。", map[string]interface{}{
 			"service": map[string]interface{}{"type": "string", "description": "Service name"},
 		}, []string{"service"}),
-		toolWithSSH("inspect_service_logs", "Fetch recent logs for a Linux service.", map[string]interface{}{
+		toolWithSSH("inspect_service_logs", "读取 Linux 服务最近日志。", map[string]interface{}{
 			"service": map[string]interface{}{"type": "string", "description": "Service name"},
 			"lines":   map[string]interface{}{"type": "integer", "default": 80},
 		}, []string{"service"}),
-		toolWithSSH("inspect_file_snippet", "Read a focused line range from a file.", map[string]interface{}{
+		toolWithSSH("inspect_file_snippet", "读取文件指定行范围内容。", map[string]interface{}{
 			"file_path":  map[string]interface{}{"type": "string"},
 			"line_start": map[string]interface{}{"type": "integer"},
 			"line_end":   map[string]interface{}{"type": "integer"},
 		}, []string{"file_path", "line_start", "line_end"}),
-		toolWithSSH("validate_nginx_config", "Run nginx -t and capture the exact validator output.", map[string]interface{}{
+		toolWithSSH("validate_nginx_config", "执行 nginx -t 并返回精确校验输出。", map[string]interface{}{
 			"config_path": map[string]interface{}{"type": "string"},
 		}, nil),
-		toolWithSSH("replace_file_content", "Replace one exact text fragment inside a file.", map[string]interface{}{
+		toolWithSSH("replace_file_content", "替换文件中的精确文本片段。", map[string]interface{}{
 			"file_path":     map[string]interface{}{"type": "string"},
 			"search":        map[string]interface{}{"type": "string"},
 			"replace":       map[string]interface{}{"type": "string"},
 			"create_backup": map[string]interface{}{"type": "boolean", "default": true},
 		}, []string{"file_path", "search", "replace"}),
-		toolWithSSH("restart_service", "Restart a Linux service.", map[string]interface{}{
+		toolWithSSH("restart_service", "重启 Linux 服务。", map[string]interface{}{
 			"service": map[string]interface{}{"type": "string", "description": "Service name"},
 		}, []string{"service"}),
-		toolWithSSH("execute_ssh", "Fallback raw SSH command when no typed read-only tool can express the inspection step.", map[string]interface{}{
+		toolWithSSH("execute_ssh", "结构化工具无法表达时的兜底 SSH 命令（优先只读）。", map[string]interface{}{
 			"command": map[string]interface{}{"type": "string"},
 			"cwd":     map[string]interface{}{"type": "string", "default": "/"},
 		}, []string{"command"}),

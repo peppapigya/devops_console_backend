@@ -66,12 +66,13 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 	actionOrder := 0
 	lastActionSuccess := true
 	lastActionOutput := ""
+	commandAttempts := map[string]int{}
 
 	for round := 0; round < maxRounds; round++ {
 		hub.Publish(repair.SSEEvent{
 			Type:      repair.EventThinking,
 			SessionID: sessionID,
-			Payload:   repair.ThinkingPayload{Content: fmt.Sprintf("Round %d: collecting evidence and evaluating next step...", round+1)},
+			Payload:   repair.ThinkingPayload{Content: fmt.Sprintf("第 %d 轮：正在收集证据并评估下一步...", round+1)},
 		})
 
 		llmResp, err := llmClient.Call(context.Background())
@@ -92,6 +93,16 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 				if err != nil {
 					llmClient.AddToolResult(tc.ID, fmt.Sprintf(`{"error":%q}`, err.Error()))
 					continue
+				}
+				commandKey := strings.TrimSpace(exec.name + "::" + exec.commandText)
+				if commandKey != "::" && commandAttempts[commandKey] >= 2 {
+					msg := "检测到重复执行同一命令。请基于新假设选择不同工具，或直接调用 submit_diagnosis_report 提交结论。"
+					llmClient.AddToolResult(tc.ID, fmt.Sprintf(`{"success":false,"error":%q}`, msg))
+					llmClient.AddUserMessage("不要重复同一命令。请改用不同证据路径，或立即调用 submit_diagnosis_report 结束流程。")
+					continue
+				}
+				if commandKey != "::" {
+					commandAttempts[commandKey]++
 				}
 
 				actionOrder++
@@ -163,8 +174,14 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 
 				resultJSON, _ := json.Marshal(map[string]interface{}{"success": toolResult.Success, "output": toolResult.Output, "stderr": toolResult.Stderr, "exit_code": toolResult.ExitCode, "duration_ms": toolResult.DurationMs})
 				llmClient.AddToolResult(tc.ID, string(resultJSON))
+				if exec.name == "validate_nginx_config" && toolResult.Success {
+					llmClient.AddUserMessage("nginx 配置验证已成功。下一步必须调用 submit_diagnosis_report 提交最终结论，不要继续重复取证。")
+				}
 				msgNow := time.Now()
 				_ = msgMapper.BatchCreate([]*model.SessionMessage{{SessionID: sessionID, Role: "tool", Content: string(resultJSON), CreatedAt: &msgNow}})
+			}
+			if round >= maxRounds-2 {
+				llmClient.AddUserMessage("你即将达到最大轮次。请立即收敛，并调用 submit_diagnosis_report 输出最终报告。")
 			}
 			continue
 		}
@@ -172,7 +189,7 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 		if llmResp.Content != "" {
 			msgNow := time.Now()
 			_ = msgMapper.BatchCreate([]*model.SessionMessage{{SessionID: sessionID, Role: "assistant", Content: llmResp.Content, CreatedAt: &msgNow}})
-			llmClient.AddUserMessage("Do not answer with plain text. Use one of the registered tools for evidence gathering or submit_diagnosis_report to finish.")
+			llmClient.AddUserMessage("不要只输出纯文本。请调用工具收集证据，或调用 submit_diagnosis_report 结束流程。并且推理描述必须中文。")
 			continue
 		}
 	}
@@ -184,7 +201,7 @@ func handleDiagnosisReport(tc ToolCall, sessionID string, actionMapper *mapper.R
 	args := tc.Arguments
 	fixed, _ := args["fixed"].(bool)
 	if fixed && !lastActionSuccess {
-		msg := fmt.Sprintf("The latest validation/action failed, so you cannot submit fixed=true. Latest output: %s", lastActionOutput)
+		msg := fmt.Sprintf("最近一次验证/执行失败，不能提交 fixed=true。最近输出：%s", lastActionOutput)
 		llmClient.AddToolResult(tc.ID, fmt.Sprintf(`{"error":%q}`, msg))
 		return nil
 	}
