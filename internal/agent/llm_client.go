@@ -12,43 +12,35 @@ import (
 	"github.com/openai/openai-go/v3/shared"
 )
 
-// LLMConfig LLM 连接配置
 type LLMConfig struct {
 	APIKey  string
 	BaseURL string
 	Model   string
 }
 
-// Message 对话历史单条消息（用于持久化）
 type Message struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
-// ToolCall LLM 返回的工具调用指令
 type ToolCall struct {
 	ID        string                 `json:"id"`
 	Name      string                 `json:"name"`
 	Arguments map[string]interface{} `json:"arguments"`
 }
 
-// LLMResponse LLM 本轮回复
 type LLMResponse struct {
-	// LLM 要求调用工具
 	ToolCalls []ToolCall `json:"tool_calls,omitempty"`
-	// 文本回复（诊断结论/最终报告）
-	Content  string `json:"content,omitempty"`
-	IsFinish bool   // 是否已完成（没有工具调用，输出了最终内容）
+	Content   string     `json:"content,omitempty"`
+	IsFinish  bool
 }
 
-// LLMClient 直接连接通义千问（OpenAI 兼容模式），支持 Function Calling
 type LLMClient struct {
 	cfg     LLMConfig
 	tools   []openai.ChatCompletionToolUnionParam
 	history []openai.ChatCompletionMessageParamUnion
 }
 
-// NewLLMClient 创建 LLM 客户端
 func NewLLMClient(cfg LLMConfig) *LLMClient {
 	return &LLMClient{
 		cfg:     cfg,
@@ -57,173 +49,150 @@ func NewLLMClient(cfg LLMConfig) *LLMClient {
 	}
 }
 
-// SetSystemPrompt 设置系统提示词（插到历史最前）
 func (c *LLMClient) SetSystemPrompt(prompt string) {
-	c.history = append(
-		[]openai.ChatCompletionMessageParamUnion{openai.SystemMessage(prompt)},
-		c.history...,
-	)
+	c.history = append([]openai.ChatCompletionMessageParamUnion{openai.SystemMessage(prompt)}, c.history...)
 }
 
-// AddUserMessage 追加用户消息
 func (c *LLMClient) AddUserMessage(content string) {
 	c.history = append(c.history, openai.UserMessage(content))
 }
 
-// AddToolResult 将工具执行结果追加到历史
 func (c *LLMClient) AddToolResult(toolCallID, content string) {
 	c.history = append(c.history, openai.ToolMessage(toolCallID, content))
 }
 
-// Call 调用 LLM，返回本轮回复（工具调用或最终答案）
 func (c *LLMClient) Call(ctx context.Context) (*LLMResponse, error) {
-	client := openai.NewClient(
-		option.WithAPIKey(c.cfg.APIKey),
-		option.WithBaseURL(c.cfg.BaseURL),
-	)
-
-	params := openai.ChatCompletionNewParams{
+	client := openai.NewClient(option.WithAPIKey(c.cfg.APIKey), option.WithBaseURL(c.cfg.BaseURL))
+	resp, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
 		Model:    c.cfg.Model,
 		Messages: c.history,
 		Tools:    c.tools,
-	}
-
-	resp, err := client.Chat.Completions.New(ctx, params)
+	})
 	if err != nil {
-		logger.Errorf("调用 LLM API 失败: %v", err)
-		return nil, fmt.Errorf("LLM 调用失败: %v", err)
+		logger.Errorf("call llm failed: %v", err)
+		return nil, fmt.Errorf("llm call failed: %v", err)
 	}
-
 	if len(resp.Choices) == 0 {
-		return nil, fmt.Errorf("LLM 返回空 choices")
+		return nil, fmt.Errorf("llm returned empty choices")
 	}
 
-	choice := resp.Choices[0]
-	msg := choice.Message
-
-	// 将 assistant 消息追加到历史
+	msg := resp.Choices[0].Message
 	c.history = append(c.history, msg.ToParam())
 
 	result := &LLMResponse{}
-
-	// 判断是否有工具调用
 	if len(msg.ToolCalls) > 0 {
 		for _, tc := range msg.ToolCalls {
 			var args map[string]interface{}
-			if parseErr := json.Unmarshal([]byte(tc.Function.Arguments), &args); parseErr != nil {
+			if err := json.Unmarshal([]byte(tc.Function.Arguments), &args); err != nil {
 				args = map[string]interface{}{"raw": tc.Function.Arguments}
 			}
-			result.ToolCalls = append(result.ToolCalls, ToolCall{
-				ID:        tc.ID,
-				Name:      tc.Function.Name,
-				Arguments: args,
-			})
+			result.ToolCalls = append(result.ToolCalls, ToolCall{ID: tc.ID, Name: tc.Function.Name, Arguments: args})
 		}
 		return result, nil
 	}
 
-	// 文本回复
 	result.Content = strings.TrimSpace(msg.Content)
 	result.IsFinish = true
 	return result, nil
 }
 
-// buildToolParams 构建 OpenAI Function Calling 格式的工具列表
 func buildToolParams() []openai.ChatCompletionToolUnionParam {
-	sshFunc := shared.FunctionDefinitionParam{
-		Name:        "execute_ssh",
-		Description: openai.String("在目标主机上执行一条 Shell 命令，返回 stdout、stderr 和退出码。用于诊断系统状态或执行修复操作。每次只执行一条命令，等待结果后再决策。"),
-		Parameters: openai.FunctionParameters{
-			"type": "object",
-			"properties": map[string]interface{}{
-				"thought": map[string]interface{}{
-					"type":        "string",
-					"description": "必须填写！在确实要执行该命令前，先写下你当前的推理过程：你看到了什么现象？你为什么认为需要执行这条语句？你的预期是什么？",
-				},
-				"host": map[string]interface{}{
-					"type":        "string",
-					"description": "目标主机 IP 地址或域名",
-				},
-				"port": map[string]interface{}{
-					"type":        "integer",
-					"description": "SSH 端口号，默认 22",
-					"default":     22,
-				},
-				"user": map[string]interface{}{
-					"type":        "string",
-					"description": "SSH 登录用户名",
-				},
-				"password": map[string]interface{}{
-					"type":        "string",
-					"description": "SSH 登录密码",
-				},
-				"command": map[string]interface{}{
-					"type":        "string",
-					"description": "要执行的单条 Shell 命令",
-				},
-				"cwd": map[string]interface{}{
-					"type":        "string",
-					"description": "命令执行的工作目录，默认为 /",
-					"default":     "/",
-				},
-				"timeout": map[string]interface{}{
-					"type":        "integer",
-					"description": "命令执行超时时间（秒），默认 30",
-					"default":     30,
-				},
-				"risk_level": map[string]interface{}{
-					"type":        "string",
-					"description": "命令风险等级：low（纯读写查询）、medium（状态变更）、high（重启/删除/修改关键配置）",
-					"enum":        []string{"low", "medium", "high"},
-				},
-				"description": map[string]interface{}{
-					"type":        "string",
-					"description": "该命令的用途说明（将显示给用户）",
-				},
-			},
-			"required": []string{"thought", "host", "user", "password", "command", "risk_level", "description"},
+	commonMeta := map[string]interface{}{
+		"thought": map[string]interface{}{
+			"type":        "string",
+			"description": "Reason about what evidence you already have, why this tool is needed, and what you expect to learn.",
 		},
+		"description": map[string]interface{}{
+			"type":        "string",
+			"description": "Short user-facing summary of this step.",
+		},
+		"risk_level": map[string]interface{}{
+			"type":        "string",
+			"description": "Risk level for the action.",
+			"enum":        []string{"low", "medium", "high"},
+		},
+		"risk_reason": map[string]interface{}{
+			"type":        "string",
+			"description": "Why this action has the chosen risk level.",
+		},
+		"host":     map[string]interface{}{"type": "string"},
+		"port":     map[string]interface{}{"type": "integer", "default": 22},
+		"user":     map[string]interface{}{"type": "string"},
+		"password": map[string]interface{}{"type": "string"},
+		"timeout":  map[string]interface{}{"type": "integer", "default": 30},
 	}
-	reportFunc := shared.FunctionDefinitionParam{
+
+	toolWithSSH := func(name, desc string, extra map[string]interface{}, required []string) openai.ChatCompletionToolUnionParam {
+		properties := map[string]interface{}{}
+		for k, v := range commonMeta {
+			properties[k] = v
+		}
+		for k, v := range extra {
+			properties[k] = v
+		}
+		baseRequired := []string{"thought", "description", "risk_level", "risk_reason", "host", "user", "password"}
+		baseRequired = append(baseRequired, required...)
+		return openai.ChatCompletionFunctionTool(shared.FunctionDefinitionParam{
+			Name:        name,
+			Description: openai.String(desc),
+			Parameters: openai.FunctionParameters{
+				"type":       "object",
+				"properties": properties,
+				"required":   baseRequired,
+			},
+		})
+	}
+
+	reportFunc := openai.ChatCompletionFunctionTool(shared.FunctionDefinitionParam{
 		Name:        "submit_diagnosis_report",
-		Description: openai.String("如果已经发现明确的错误原因或根因，必须调用此工具提交最终诊断报告。调用此工具表示排查结束。"),
+		Description: openai.String("Submit the final RCA report. This is the only valid way to end the investigation."),
 		Parameters: openai.FunctionParameters{
 			"type": "object",
 			"properties": map[string]interface{}{
-				"thought": map[string]interface{}{
-					"type":        "string",
-					"description": "必须填写！你是基于什么客观证据推导出这些结论并决定结束排查的？（详细推理过程）",
-				},
-				"conclusion": map[string]interface{}{
-					"type":        "string",
-					"description": "问题总结（1-2句话）",
-				},
-				"root_cause": map[string]interface{}{
-					"type":        "string",
-					"description": "明确的根因详情",
-				},
-				"severity": map[string]interface{}{
-					"type": "string",
-					"enum": []string{"low", "medium", "high", "critical"},
-				},
-				"fixed": map[string]interface{}{
-					"type":        "boolean",
-					"description": "是否已经在刚才的动作中完成了修复",
-				},
-				"fix_summary": map[string]interface{}{
-					"type":        "string",
-					"description": "执行了哪些具体命令进行的修复",
-				},
-				"recommendation": map[string]interface{}{
-					"type":        "string",
-					"description": "后续的改进建议",
-				},
+				"thought":        map[string]interface{}{"type": "string"},
+				"summary":        map[string]interface{}{"type": "string"},
+				"root_cause":     map[string]interface{}{"type": "string"},
+				"severity":       map[string]interface{}{"type": "string", "enum": []string{"low", "medium", "high", "critical"}},
+				"fixed":          map[string]interface{}{"type": "boolean"},
+				"symptoms":       map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+				"evidence":       map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
+				"fix_summary":    map[string]interface{}{"type": "string"},
+				"recommendation": map[string]interface{}{"type": "string"},
+				"next_steps":     map[string]interface{}{"type": "array", "items": map[string]interface{}{"type": "string"}},
 			},
-			"required": []string{"thought", "conclusion", "root_cause", "severity", "fixed"},
+			"required": []string{"thought", "summary", "root_cause", "severity", "fixed", "symptoms", "evidence"},
 		},
-	}
+	})
+
 	return []openai.ChatCompletionToolUnionParam{
-		openai.ChatCompletionFunctionTool(sshFunc),
-		openai.ChatCompletionFunctionTool(reportFunc),
+		toolWithSSH("inspect_service_status", "Inspect the runtime status of a Linux service.", map[string]interface{}{
+			"service": map[string]interface{}{"type": "string", "description": "Service name"},
+		}, []string{"service"}),
+		toolWithSSH("inspect_service_logs", "Fetch recent logs for a Linux service.", map[string]interface{}{
+			"service": map[string]interface{}{"type": "string", "description": "Service name"},
+			"lines":   map[string]interface{}{"type": "integer", "default": 80},
+		}, []string{"service"}),
+		toolWithSSH("inspect_file_snippet", "Read a focused line range from a file.", map[string]interface{}{
+			"file_path":  map[string]interface{}{"type": "string"},
+			"line_start": map[string]interface{}{"type": "integer"},
+			"line_end":   map[string]interface{}{"type": "integer"},
+		}, []string{"file_path", "line_start", "line_end"}),
+		toolWithSSH("validate_nginx_config", "Run nginx -t and capture the exact validator output.", map[string]interface{}{
+			"config_path": map[string]interface{}{"type": "string"},
+		}, nil),
+		toolWithSSH("replace_file_content", "Replace one exact text fragment inside a file.", map[string]interface{}{
+			"file_path":     map[string]interface{}{"type": "string"},
+			"search":        map[string]interface{}{"type": "string"},
+			"replace":       map[string]interface{}{"type": "string"},
+			"create_backup": map[string]interface{}{"type": "boolean", "default": true},
+		}, []string{"file_path", "search", "replace"}),
+		toolWithSSH("restart_service", "Restart a Linux service.", map[string]interface{}{
+			"service": map[string]interface{}{"type": "string", "description": "Service name"},
+		}, []string{"service"}),
+		toolWithSSH("execute_ssh", "Fallback raw SSH command when no typed read-only tool can express the inspection step.", map[string]interface{}{
+			"command": map[string]interface{}{"type": "string"},
+			"cwd":     map[string]interface{}{"type": "string", "default": "/"},
+		}, []string{"command"}),
+		reportFunc,
 	}
 }

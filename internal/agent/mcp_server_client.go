@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-// ToolCallRequest 发送给 mcp-agent 工具服务器的请求
 type ToolCallRequest struct {
 	Host     string `json:"host"`
 	Port     int    `json:"port"`
@@ -19,7 +18,50 @@ type ToolCallRequest struct {
 	Timeout  int    `json:"timeout"`
 }
 
-// ToolCallResult mcp-agent 工具服务器返回的结果
+type StructuredToolBase struct {
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	User     string `json:"user"`
+	Password string `json:"password"`
+	Timeout  int    `json:"timeout"`
+}
+
+type ServiceStatusRequest struct {
+	StructuredToolBase
+	Service string `json:"service"`
+}
+
+type ServiceLogsRequest struct {
+	StructuredToolBase
+	Service string `json:"service"`
+	Lines   int    `json:"lines"`
+}
+
+type FileSnippetRequest struct {
+	StructuredToolBase
+	FilePath  string `json:"file_path"`
+	LineStart int    `json:"line_start"`
+	LineEnd   int    `json:"line_end"`
+}
+
+type NginxConfigValidateRequest struct {
+	StructuredToolBase
+	ConfigPath string `json:"config_path"`
+}
+
+type FileReplaceRequest struct {
+	StructuredToolBase
+	FilePath     string `json:"file_path"`
+	Search       string `json:"search"`
+	Replace      string `json:"replace"`
+	CreateBackup bool   `json:"create_backup"`
+}
+
+type RestartServiceRequest struct {
+	StructuredToolBase
+	Service string `json:"service"`
+}
+
 type ToolCallResult struct {
 	Success    bool   `json:"success"`
 	Output     string `json:"output"`
@@ -29,13 +71,11 @@ type ToolCallResult struct {
 	Error      string `json:"error,omitempty"`
 }
 
-// mcpToolResponse mcp-agent HTTP 响应包装
 type mcpToolResponse struct {
 	Data    *ToolCallResult `json:"data"`
 	Message string          `json:"message"`
 }
 
-// MCPServerClient 向 mcp-agent 工具服务器发送工具调用请求
 type MCPServerClient struct {
 	baseURL    string
 	token      string
@@ -47,22 +87,48 @@ func NewMCPServerClient(baseURL, token string) *MCPServerClient {
 		baseURL: baseURL,
 		token:   token,
 		httpClient: &http.Client{
-			Timeout: 5 * time.Minute, // SSH 命令可能耗时较长
+			Timeout: 5 * time.Minute,
 		},
 	}
 }
 
-// ExecuteSSH 调用 mcp-agent 的 /api/v1/tools/execute_ssh 接口
 func (c *MCPServerClient) ExecuteSSH(req ToolCallRequest) (*ToolCallResult, error) {
-	data, err := json.Marshal(req)
+	return c.post("/api/v1/tools/execute_ssh", req)
+}
+
+func (c *MCPServerClient) InspectServiceStatus(req ServiceStatusRequest) (*ToolCallResult, error) {
+	return c.post("/api/v1/tools/inspect_service_status", req)
+}
+
+func (c *MCPServerClient) InspectServiceLogs(req ServiceLogsRequest) (*ToolCallResult, error) {
+	return c.post("/api/v1/tools/inspect_service_logs", req)
+}
+
+func (c *MCPServerClient) InspectFileSnippet(req FileSnippetRequest) (*ToolCallResult, error) {
+	return c.post("/api/v1/tools/inspect_file_snippet", req)
+}
+
+func (c *MCPServerClient) ValidateNginxConfig(req NginxConfigValidateRequest) (*ToolCallResult, error) {
+	return c.post("/api/v1/tools/validate_nginx_config", req)
+}
+
+func (c *MCPServerClient) ReplaceFileContent(req FileReplaceRequest) (*ToolCallResult, error) {
+	return c.post("/api/v1/tools/replace_file_content", req)
+}
+
+func (c *MCPServerClient) RestartService(req RestartServiceRequest) (*ToolCallResult, error) {
+	return c.post("/api/v1/tools/restart_service", req)
+}
+
+func (c *MCPServerClient) post(path string, payload interface{}) (*ToolCallResult, error) {
+	data, err := json.Marshal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("序列化请求失败: %v", err)
+		return nil, fmt.Errorf("marshal request failed: %v", err)
 	}
 
-	url := c.baseURL + "/api/v1/tools/execute_ssh"
-	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	httpReq, err := http.NewRequest(http.MethodPost, c.baseURL+path, bytes.NewBuffer(data))
 	if err != nil {
-		return nil, fmt.Errorf("构建 HTTP 请求失败: %v", err)
+		return nil, fmt.Errorf("build request failed: %v", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	if c.token != "" {
@@ -71,20 +137,20 @@ func (c *MCPServerClient) ExecuteSSH(req ToolCallRequest) (*ToolCallResult, erro
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP 请求失败: %v", err)
+		return nil, fmt.Errorf("request failed: %v", err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("mcp-agent 返回异常状态码: %d", resp.StatusCode)
+		return nil, fmt.Errorf("mcp server returned status %d", resp.StatusCode)
 	}
 
 	var result mcpToolResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil, fmt.Errorf("解析响应失败: %v", err)
+		return nil, fmt.Errorf("decode response failed: %v", err)
 	}
 	if result.Data == nil {
-		return nil, fmt.Errorf("mcp-agent 返回空结果")
+		return nil, fmt.Errorf("mcp server returned empty data")
 	}
 	return result.Data, nil
 }

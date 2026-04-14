@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+
+	"devops-console-backend/internal/dal/mapper"
+	"devops-console-backend/internal/dal/model"
 )
 
 // SSEEventType SSE 事件类型
@@ -115,6 +118,7 @@ type ErrorPayload struct {
 type StreamHub struct {
 	mu          sync.RWMutex
 	subscribers map[string][]chan string // sessionID -> []channel
+	eventMapper *mapper.RepairSessionEventMapper
 }
 
 var globalHub = &StreamHub{
@@ -124,6 +128,10 @@ var globalHub = &StreamHub{
 // GetHub 获取全局 StreamHub 单例
 func GetHub() *StreamHub {
 	return globalHub
+}
+
+func (h *StreamHub) SetEventMapper(eventMapper *mapper.RepairSessionEventMapper) {
+	h.eventMapper = eventMapper
 }
 
 // Subscribe 订阅一个 session 的 SSE 流，返回消息 channel 和取消函数
@@ -155,11 +163,29 @@ func (h *StreamHub) Subscribe(sessionID string) (chan string, func()) {
 
 // Publish 向 session 的所有订阅者广播一条 SSE 消息
 func (h *StreamHub) Publish(event SSEEvent) {
-	data, err := json.Marshal(event)
+	payloadBytes, err := json.Marshal(event.Payload)
 	if err != nil {
 		return
 	}
-	line := fmt.Sprintf("data: %s\n\n", string(data))
+
+	line := ""
+	if h.eventMapper != nil {
+		nowEvent := &model.RepairSessionEvent{
+			SessionID: event.SessionID,
+			EventType: string(event.Type),
+			Payload:   string(payloadBytes),
+		}
+		if err := h.eventMapper.Create(nowEvent); err != nil {
+			return
+		}
+		line = formatPersistedEvent(nowEvent)
+	} else {
+		data, err := json.Marshal(event)
+		if err != nil {
+			return
+		}
+		line = fmt.Sprintf("data: %s\n\n", string(data))
+	}
 
 	h.mu.RLock()
 	chans := h.subscribers[event.SessionID]
@@ -187,4 +213,29 @@ func (h *StreamHub) PublishDone(sessionID string, payload DonePayload) {
 		default:
 		}
 	}
+}
+
+func (h *StreamHub) Replay(sessionID string, sinceID uint64) ([]string, uint64, error) {
+	if h.eventMapper == nil {
+		return nil, sinceID, nil
+	}
+	events, err := h.eventMapper.ListBySessionIDSince(sessionID, sinceID, 1000)
+	if err != nil {
+		return nil, sinceID, err
+	}
+	lines := make([]string, 0, len(events))
+	lastID := sinceID
+	for i := range events {
+		lines = append(lines, formatPersistedEvent(&events[i]))
+		lastID = events[i].ID
+	}
+	return lines, lastID, nil
+}
+
+func formatPersistedEvent(event *model.RepairSessionEvent) string {
+	payload := event.Payload
+	if payload == "" {
+		payload = "{}"
+	}
+	return fmt.Sprintf("id: %d\ndata: {\"type\":\"%s\",\"session_id\":\"%s\",\"payload\":%s}\n\n", event.ID, event.EventType, event.SessionID, payload)
 }

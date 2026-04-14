@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"devops-console-backend/internal/agent"
+	monitorCtrl "devops-console-backend/internal/controllers/monitor"
 	"devops-console-backend/internal/dal/mapper"
 	"devops-console-backend/internal/services/repair"
 	"devops-console-backend/pkg/configs"
@@ -14,7 +15,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// MCPAgentController 管理根因分析与修复 Session 的 HTTP 接口
 type MCPAgentController struct {
 	sessionSvc *repair.SessionService
 	agentCfg   repair.AgentLoopCfg
@@ -24,12 +24,12 @@ func NewMCPAgentController(sessionSvc *repair.SessionService, agentCfg repair.Ag
 	return &MCPAgentController{sessionSvc: sessionSvc, agentCfg: agentCfg}
 }
 
-// NewMCPAgentControllerFromDB 从全局 DB 连接构建 Controller（供路由层使用）
 func NewMCPAgentControllerFromDB() *MCPAgentController {
 	gdb := configs.GORMDB
 	sessionMapper := mapper.NewRepairSessionMapper(gdb)
 	msgMapper := mapper.NewSessionMessageMapper(gdb)
 	actionMapper := mapper.NewRepairActionMapper(gdb)
+	eventMapper := mapper.NewRepairSessionEventMapper(gdb)
 
 	mcpCfg := configs.GetAiConfig().MCPConfig
 	mcpURL := mcpCfg.Url
@@ -37,8 +37,7 @@ func NewMCPAgentControllerFromDB() *MCPAgentController {
 		mcpURL = "http://127.0.0.1:8080"
 	}
 
-	svc := repair.NewSessionService(sessionMapper, msgMapper, actionMapper, mcpURL)
-
+	svc := repair.NewSessionService(sessionMapper, msgMapper, actionMapper, eventMapper, mcpURL)
 	agentCfg := repair.AgentLoopCfg{
 		LLMAPIKey:    mcpCfg.LLMApiKey,
 		LLMBaseURL:   mcpCfg.LLMBaseUrl,
@@ -47,48 +46,44 @@ func NewMCPAgentControllerFromDB() *MCPAgentController {
 		MCPToken:     mcpCfg.Token,
 		MaxRounds:    mcpCfg.MaxRounds,
 	}
-
 	return &MCPAgentController{sessionSvc: svc, agentCfg: agentCfg}
 }
 
-// ──────────────────────────────────────────────────────────────
-// POST /api/v1/mcp/session — 创建 Session，立即返回 session_id
-// ──────────────────────────────────────────────────────────────
 func (ctrl *MCPAgentController) CreateSession(c *gin.Context) {
 	helper := utils.NewResponseHelper(c)
 	aiCfg := configs.GetAiConfig().MCPConfig
 	if !aiCfg.Enabled {
-		helper.BadRequest("AI 功能未启用")
+		helper.BadRequest("AI feature is disabled")
 		return
 	}
 
 	var req repair.CreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		helper.BadRequest("参数解析失败: " + err.Error())
+		helper.BadRequest("invalid request: " + err.Error())
 		return
+	}
+	if req.Operator == "" {
+		req.Operator = c.GetString("username")
 	}
 
 	sessionID, err := ctrl.sessionSvc.CreateSession(req)
 	if err != nil {
-		helper.InternalError("创建 session 失败: " + err.Error())
+		helper.InternalError("create session failed: " + err.Error())
 		return
 	}
 
-	// 异步启动 MCP Agent 循环
 	ctrl.sessionSvc.StartAsync(sessionID, req, ctrl.agentCfg, agent.RunAgentLoop)
-
+	monitorCtrl.RepairSessionsTotal.WithLabelValues("created").Inc()
 	helper.Success("success", map[string]interface{}{"session_id": sessionID})
 }
 
-// ──────────────────────────────────────────────────────────────
-// GET /api/v1/mcp/session/:id/stream — SSE 长连接实时推送
-// ──────────────────────────────────────────────────────────────
 func (ctrl *MCPAgentController) StreamSession(c *gin.Context) {
 	sessionID := c.Param("id")
 	if sessionID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "session_id 不能为空"})
+		c.JSON(http.StatusBadRequest, gin.H{"message": "session_id is required"})
 		return
 	}
+	sinceID, _ := strconv.ParseUint(c.DefaultQuery("since_id", "0"), 10, 64)
 
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
@@ -96,13 +91,20 @@ func (ctrl *MCPAgentController) StreamSession(c *gin.Context) {
 	c.Header("X-Accel-Buffering", "no")
 
 	hub := repair.GetHub()
+	flusher, canFlush := c.Writer.(http.Flusher)
+	if replayLines, _, err := hub.Replay(sessionID, sinceID); err == nil {
+		for _, line := range replayLines {
+			_, _ = io.WriteString(c.Writer, line)
+		}
+		if canFlush {
+			flusher.Flush()
+		}
+	}
+
 	ch, cancel := hub.Subscribe(sessionID)
 	defer cancel()
-
 	ticker := time.NewTicker(25 * time.Second)
 	defer ticker.Stop()
-
-	flusher, canFlush := c.Writer.(http.Flusher)
 
 	for {
 		select {
@@ -128,16 +130,12 @@ func (ctrl *MCPAgentController) StreamSession(c *gin.Context) {
 	}
 }
 
-// ──────────────────────────────────────────────────────────────
-// POST /api/v1/mcp/session/:id/action/:actionId/approve
-// ──────────────────────────────────────────────────────────────
 func (ctrl *MCPAgentController) ApproveAction(c *gin.Context) {
 	helper := utils.NewResponseHelper(c)
 	sessionID := c.Param("id")
-	actionIDStr := c.Param("actionId")
-	actionID, err := strconv.ParseUint(actionIDStr, 10, 64)
+	actionID, err := strconv.ParseUint(c.Param("actionId"), 10, 64)
 	if err != nil {
-		helper.BadRequest("actionId 格式错误")
+		helper.BadRequest("invalid actionId")
 		return
 	}
 
@@ -145,18 +143,32 @@ func (ctrl *MCPAgentController) ApproveAction(c *gin.Context) {
 		Approved bool `json:"approved"`
 	}
 	_ = c.ShouldBindJSON(&body)
-
-	ok := repair.ConfirmAction(sessionID, actionID, body.Approved)
-	if !ok {
-		helper.NotFound("未找到等待确认的动作，可能已超时")
+	gdb := configs.GORMDB
+	actionMapper := mapper.NewRepairActionMapper(gdb)
+	now := time.Now()
+	approver := c.GetString("username")
+	updateFields := map[string]interface{}{
+		"approved_by": approver,
+		"approved_at": &now,
+	}
+	if body.Approved {
+		updateFields["status"] = "approved"
+	} else {
+		updateFields["status"] = "skipped"
+	}
+	_ = actionMapper.UpdateFields(actionID, updateFields)
+	if ok := repair.ConfirmAction(sessionID, actionID, body.Approved); !ok {
+		helper.NotFound("waiting action not found or already expired")
 		return
 	}
+	decision := "rejected"
+	if body.Approved {
+		decision = "approved"
+	}
+	monitorCtrl.RepairApprovalsTotal.WithLabelValues(decision).Inc()
 	helper.Success("success")
 }
 
-// ──────────────────────────────────────────────────────────────
-// POST /api/v1/mcp/session/:id/pause
-// ──────────────────────────────────────────────────────────────
 func (ctrl *MCPAgentController) PauseSession(c *gin.Context) {
 	helper := utils.NewResponseHelper(c)
 	sessionID := c.Param("id")
@@ -170,43 +182,36 @@ func (ctrl *MCPAgentController) PauseSession(c *gin.Context) {
 	}
 	sessionMapper := mapper.NewRepairSessionMapper(gdb)
 	_ = sessionMapper.UpdateStatus(sessionID, "paused")
-	helper.Success("已请求暂停")
+	helper.Success("pause requested")
 }
 
-// ──────────────────────────────────────────────────────────────
-// GET /api/v1/mcp/session/list — 历史 session 列表
-// ──────────────────────────────────────────────────────────────
 func (ctrl *MCPAgentController) ListSessions(c *gin.Context) {
 	helper := utils.NewResponseHelper(c)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
-
 	gdb := configs.GORMDB
 	sessionMapper := mapper.NewRepairSessionMapper(gdb)
 	total, list, err := sessionMapper.ListPage(page, pageSize)
 	if err != nil {
-		helper.InternalError("查询失败: " + err.Error())
+		helper.InternalError("query failed: " + err.Error())
 		return
 	}
+	normalizeSessionListForResponse(list)
 	helper.Success("success", map[string]interface{}{"list": list, "total": total})
 }
 
-// ──────────────────────────────────────────────────────────────
-// GET /api/v1/mcp/session/:id — session 详情
-// ──────────────────────────────────────────────────────────────
 func (ctrl *MCPAgentController) GetSession(c *gin.Context) {
 	helper := utils.NewResponseHelper(c)
 	sessionID := c.Param("id")
 	gdb := configs.GORMDB
 	sessionMapper := mapper.NewRepairSessionMapper(gdb)
 	actionMapper := mapper.NewRepairActionMapper(gdb)
-
 	session, err := sessionMapper.GetByID(sessionID)
 	if err != nil {
-		helper.NotFound("session 不存在")
+		helper.NotFound("session not found")
 		return
 	}
+	normalizeSessionForResponse(session)
 	actions, _ := actionMapper.GetBySessionID(sessionID)
-
 	helper.Success("success", map[string]interface{}{"session": session, "actions": actions})
 }

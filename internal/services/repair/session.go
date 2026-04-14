@@ -1,6 +1,7 @@
 package repair
 
 import (
+	monitorCtrl "devops-console-backend/internal/controllers/monitor"
 	"devops-console-backend/internal/dal/mapper"
 	"devops-console-backend/internal/dal/model"
 	"devops-console-backend/internal/types"
@@ -16,6 +17,7 @@ type SessionService struct {
 	sessionMapper *mapper.RepairSessionMapper
 	msgMapper     *mapper.SessionMessageMapper
 	actionMapper  *mapper.RepairActionMapper
+	eventMapper   *mapper.RepairSessionEventMapper
 	hub           *StreamHub
 	mcpAgentURL   string
 }
@@ -24,13 +26,17 @@ func NewSessionService(
 	sessionMapper *mapper.RepairSessionMapper,
 	msgMapper *mapper.SessionMessageMapper,
 	actionMapper *mapper.RepairActionMapper,
+	eventMapper *mapper.RepairSessionEventMapper,
 	mcpAgentURL string,
 ) *SessionService {
+	hub := GetHub()
+	hub.SetEventMapper(eventMapper)
 	return &SessionService{
 		sessionMapper: sessionMapper,
 		msgMapper:     msgMapper,
 		actionMapper:  actionMapper,
-		hub:           GetHub(),
+		eventMapper:   eventMapper,
+		hub:           hub,
 		mcpAgentURL:   mcpAgentURL,
 	}
 }
@@ -41,6 +47,7 @@ type CreateRequest struct {
 	SSHUser  string         `json:"ssh_user"`
 	SSHPass  string         `json:"ssh_pass"`
 	SSHPort  int            `json:"ssh_port"`
+	Operator string         `json:"operator"`
 }
 
 // CreateSession 创建一个新的根因分析 session，返回 session_id
@@ -49,13 +56,15 @@ func (s *SessionService) CreateSession(req CreateRequest) (string, error) {
 	now := time.Now()
 	session := &model.RepairSession{
 		ID:         id,
+		TraceID:    "repair-" + id,
+		Operator:   req.Operator,
 		LogEventID: req.LogEvent.ID,
 		LogSource:  req.LogEvent.Source,
 		LogMessage: req.LogEvent.Message,
 		LogLevel:   req.LogEvent.Level,
 		LogHost:    req.LogEvent.Host,
 		LogService: req.LogEvent.Service,
-		Status:     "pending",
+		Status:     "created",
 		CreatedAt:  &now,
 		UpdatedAt:  &now,
 	}
@@ -126,6 +135,7 @@ func (s *SessionService) StartAsync(sessionID string, req CreateRequest, cfg Age
 				SessionID: sessionID,
 				Payload:   ErrorPayload{Code: "RUN_ERROR", Message: err.Error()},
 			})
+			monitorCtrl.RepairSessionsTotal.WithLabelValues("failed").Inc()
 			_ = s.sessionMapper.UpdateStatus(sessionID, "failed")
 			now := time.Now()
 			s.hub.PublishDone(sessionID, DonePayload{Status: "failed", CompletedActions: 0})
