@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -59,6 +60,19 @@ type FileReplaceRequest struct {
 
 type RestartServiceRequest struct {
 	StructuredToolBase
+	Service string `json:"service"`
+}
+
+type KBRequest struct {
+	Topic string `json:"topic"`
+}
+
+type KBWriteRequest struct {
+	Topic   string `json:"topic"`
+	Content string `json:"content"`
+}
+
+type ServiceResourceRequest struct {
 	Service string `json:"service"`
 }
 
@@ -120,6 +134,20 @@ func (c *MCPServerClient) RestartService(req RestartServiceRequest) (*ToolCallRe
 	return c.post("/api/v1/tools/restart_service", req)
 }
 
+func (c *MCPServerClient) ReadKnowledgeBase(req KBRequest) (*ToolCallResult, error) {
+	return c.post("/api/v1/tools/read_knowledge_base", req)
+}
+
+func (c *MCPServerClient) WriteKnowledgeBase(req KBWriteRequest) (*ToolCallResult, error) {
+	return c.post("/api/v1/tools/write_knowledge_base", req)
+}
+
+func (c *MCPServerClient) ReadServiceResource(req ServiceResourceRequest) (*ToolCallResult, error) {
+	values := url.Values{}
+	values.Set("service", req.Service)
+	return c.get("/api/v1/resources/read?" + values.Encode())
+}
+
 func (c *MCPServerClient) post(path string, payload interface{}) (*ToolCallResult, error) {
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -131,6 +159,35 @@ func (c *MCPServerClient) post(path string, payload interface{}) (*ToolCallResul
 		return nil, fmt.Errorf("build request failed: %v", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	if c.token != "" {
+		httpReq.Header.Set("token", c.token)
+	}
+
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("mcp server returned status %d", resp.StatusCode)
+	}
+
+	var result mcpToolResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode response failed: %v", err)
+	}
+	if result.Data == nil {
+		return nil, fmt.Errorf("mcp server returned empty data")
+	}
+	return result.Data, nil
+}
+
+func (c *MCPServerClient) get(path string) (*ToolCallResult, error) {
+	httpReq, err := http.NewRequest(http.MethodGet, c.baseURL+path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("build request failed: %v", err)
+	}
 	if c.token != "" {
 		httpReq.Header.Set("token", c.token)
 	}

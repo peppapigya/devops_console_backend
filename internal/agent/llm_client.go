@@ -169,6 +169,42 @@ func buildToolParams() []openai.ChatCompletionToolUnionParam {
 		})
 	}
 
+	toolWithoutSSH := func(name, desc string, extra map[string]interface{}, required []string) openai.ChatCompletionToolUnionParam {
+		properties := map[string]interface{}{
+			"thought": map[string]interface{}{
+				"type":        "string",
+				"description": "中文推理说明：为什么需要读取该资源或知识。",
+			},
+			"description": map[string]interface{}{
+				"type":        "string",
+				"description": "中文步骤摘要：本步骤准备读取什么知识。",
+			},
+			"risk_level": map[string]interface{}{
+				"type":        "string",
+				"description": "操作风险等级。",
+				"enum":        []string{"low", "medium", "high"},
+			},
+			"risk_reason": map[string]interface{}{
+				"type":        "string",
+				"description": "中文说明：为什么该步骤是这个风险等级。",
+			},
+		}
+		for k, v := range extra {
+			properties[k] = v
+		}
+		baseRequired := []string{"thought", "description", "risk_level", "risk_reason"}
+		baseRequired = append(baseRequired, required...)
+		return openai.ChatCompletionFunctionTool(shared.FunctionDefinitionParam{
+			Name:        name,
+			Description: openai.String(desc),
+			Parameters: openai.FunctionParameters{
+				"type":       "object",
+				"properties": properties,
+				"required":   baseRequired,
+			},
+		})
+	}
+
 	reportFunc := openai.ChatCompletionFunctionTool(shared.FunctionDefinitionParam{
 		Name:        "submit_diagnosis_report",
 		Description: openai.String("提交最终 RCA 报告。这是结束本次排障的唯一合法方式。报告字段请使用中文。"),
@@ -191,6 +227,16 @@ func buildToolParams() []openai.ChatCompletionToolUnionParam {
 	})
 
 	return []openai.ChatCompletionToolUnionParam{
+		toolWithoutSSH("read_service_resource", "优先读取与当前服务同名的知识资源。若命中资源，应先依据资源中的排障规则再继续取证或修复。", map[string]interface{}{
+			"service": map[string]interface{}{"type": "string", "description": "Service name, for example nginx or mysql"},
+		}, []string{"service"}),
+		toolWithoutSSH("read_knowledge_base", "读取本地故障知识库中的主题知识。", map[string]interface{}{
+			"topic": map[string]interface{}{"type": "string", "description": "Knowledge topic, for example nginx or mysql"},
+		}, []string{"topic"}),
+		toolWithoutSSH("write_knowledge_base", "将本次验证通过的新排障知识写回本地知识库。", map[string]interface{}{
+			"topic":   map[string]interface{}{"type": "string"},
+			"content": map[string]interface{}{"type": "string"},
+		}, []string{"topic", "content"}),
 		toolWithSSH("inspect_service_status", "检查 Linux 服务运行状态。", map[string]interface{}{
 			"service": map[string]interface{}{"type": "string", "description": "Service name"},
 		}, []string{"service"}),

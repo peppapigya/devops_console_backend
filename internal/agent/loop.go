@@ -56,11 +56,13 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 	initialUserMsg := BuildInitialUserMessage(logMessage, logHost, logService, logLevel, creds.User, creds.Password, creds.Port)
 	llmClient.SetSystemPrompt(systemPrompt)
 	llmClient.AddUserMessage(initialUserMsg)
+	llmClient.AddUserMessage("在开始现场取证前，优先调用 read_service_resource 读取与当前服务同名的知识资源；若资源不存在，再尝试 read_knowledge_base，最后才结合现场证据做保守推理。")
 
 	now := time.Now()
 	_ = msgMapper.BatchCreate([]*model.SessionMessage{
 		{SessionID: sessionID, Role: "system", Content: systemPrompt, CreatedAt: &now},
 		{SessionID: sessionID, Role: "user", Content: initialUserMsg, CreatedAt: &now},
+		{SessionID: sessionID, Role: "user", Content: "在开始现场取证前，优先调用 read_service_resource 读取与当前服务同名的知识资源；若资源不存在，再尝试 read_knowledge_base，最后才结合现场证据做保守推理。", CreatedAt: &now},
 	})
 
 	actionOrder := 0
@@ -73,7 +75,7 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 		hub.Publish(repair.SSEEvent{
 			Type:      repair.EventThinking,
 			SessionID: sessionID,
-			Payload:   repair.ThinkingPayload{Content: fmt.Sprintf("第 %d 轮：正在收集证据并评估下一步...", round+1)},
+			Payload:   repair.ThinkingPayload{Content: fmt.Sprintf("绗?%d 杞細姝ｅ湪鏀堕泦璇佹嵁骞惰瘎浼颁笅涓€姝?..", round+1)},
 		})
 
 		llmResp, err := llmClient.Call(context.Background())
@@ -129,7 +131,7 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 				publishSessionProgress(sessionMapper, hub, sessionID, "analyzing", actionOrder, actionOrder-1)
 
 				if exec.name == "restart_service" && !lastValidationSucceeded {
-					blockMsg := "禁止执行服务重启：最近一次配置验证未成功，必须先完成成功验证后才能重启服务。"
+					blockMsg := "禁止执行服务重启：最近一次验证未成功，必须先完成成功验证后才能重启服务。"
 					_ = actionMapper.UpdateFields(action.ID, map[string]interface{}{
 						"status":      "failed",
 						"error_msg":   blockMsg,
@@ -186,7 +188,7 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 					hub.Publish(repair.SSEEvent{Type: repair.EventActionResult, SessionID: sessionID, Payload: repair.ActionResultPayload{ActionID: action.ID, Status: "failed", ErrorMsg: toolErr.Error(), ExitCode: -1}})
 					llmClient.AddToolResult(tc.ID, fmt.Sprintf(`{"success":false,"error":%q,"exit_code":-1}`, toolErr.Error()))
 					if exec.name == "replace_file_content" {
-						llmClient.AddUserMessage("文件修改工具执行失败，文件大概率尚未变化。请先重新读取文件当前内容，再基于精确原文重新替换，或改用其他可证明已修改成功的方式。")
+						llmClient.AddUserMessage("文件修改工具执行失败，文件大概率尚未变化。请先重新读取文件当前内容，再基于精确原文重新替换，或改用其他可证明修改成功的方式。")
 					}
 					continue
 				}
@@ -221,8 +223,11 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 				} else if exec.name == "validate_nginx_config" && !toolResult.Success {
 					llmClient.AddUserMessage("配置验证失败，说明修复尚未生效。不要继续重启服务，也不要声称已修复成功；请重新读取文件内容，确认实际文件与错误行，再调整修复方案。")
 				}
+				if exec.name == "read_service_resource" && !toolResult.Success {
+					llmClient.AddUserMessage("当前服务没有命中的知识资源。请继续现场取证；如有相关通用主题，也可以改用 read_knowledge_base 读取知识库，再结合命令输出完成诊断。")
+				}
 				if exec.name == "replace_file_content" && !toolResult.Success {
-					llmClient.AddUserMessage("replace_file_content 返回失败，文件当前内容大概率没有按预期改动。尤其当错误为 search text not found 时，必须重新读取文件并使用精确匹配的原文后再尝试修改。")
+					llmClient.AddUserMessage("replace_file_content 返回失败时，文件当前内容大概率没有按预期改动。尤其当错误是 search text not found 时，必须重新读取文件，并使用精确匹配的原文后再尝试修改。")
 				}
 				msgNow := time.Now()
 				_ = msgMapper.BatchCreate([]*model.SessionMessage{{SessionID: sessionID, Role: "tool", Content: string(resultJSON), CreatedAt: &msgNow}})
@@ -236,7 +241,7 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 		if llmResp.Content != "" {
 			msgNow := time.Now()
 			_ = msgMapper.BatchCreate([]*model.SessionMessage{{SessionID: sessionID, Role: "assistant", Content: llmResp.Content, CreatedAt: &msgNow}})
-			llmClient.AddUserMessage("不要只输出纯文本。请调用工具收集证据，或调用 submit_diagnosis_report 结束流程。并且推理描述必须中文。")
+			llmClient.AddUserMessage("不要只输出纯文本。请调用工具收集证据，或调用 submit_diagnosis_report 结束流程，并确保推理描述使用中文。")
 			continue
 		}
 	}
@@ -248,7 +253,7 @@ func handleDiagnosisReport(tc ToolCall, sessionID string, actionMapper *mapper.R
 	args := tc.Arguments
 	fixed, _ := args["fixed"].(bool)
 	if fixed && !lastActionSuccess {
-		msg := fmt.Sprintf("最近一次验证/执行失败，不能提交 fixed=true。最近输出：%s", lastActionOutput)
+		msg := fmt.Sprintf("最近一次验证或执行失败，不能提交 fixed=true。最近输出：%s", lastActionOutput)
 		llmClient.AddToolResult(tc.ID, fmt.Sprintf(`{"error":%q}`, msg))
 		return nil
 	}
@@ -284,6 +289,55 @@ func handleDiagnosisReport(tc ToolCall, sessionID string, actionMapper *mapper.R
 }
 
 func buildToolExecution(tc ToolCall, defaultHost string, creds repair.AgentSSHCreds) (*toolExecution, error) {
+	switch tc.Name {
+	case "read_service_resource":
+		service, err := stringArg(tc.Arguments, "service")
+		if err != nil {
+			return nil, err
+		}
+		return &toolExecution{
+			name:        tc.Name,
+			request:     ServiceResourceRequest{Service: service},
+			commandText: fmt.Sprintf("read service resource: %s", service),
+			riskLevel:   strings.ToLower(optionalStringArg(tc.Arguments, "risk_level")),
+			riskReason:  optionalStringArg(tc.Arguments, "risk_reason"),
+			description: optionalStringArg(tc.Arguments, "description"),
+			thought:     optionalStringArg(tc.Arguments, "thought"),
+		}, nil
+	case "read_knowledge_base":
+		topic, err := stringArg(tc.Arguments, "topic")
+		if err != nil {
+			return nil, err
+		}
+		return &toolExecution{
+			name:        tc.Name,
+			request:     KBRequest{Topic: topic},
+			commandText: fmt.Sprintf("read knowledge base: %s", topic),
+			riskLevel:   strings.ToLower(optionalStringArg(tc.Arguments, "risk_level")),
+			riskReason:  optionalStringArg(tc.Arguments, "risk_reason"),
+			description: optionalStringArg(tc.Arguments, "description"),
+			thought:     optionalStringArg(tc.Arguments, "thought"),
+		}, nil
+	case "write_knowledge_base":
+		topic, err := stringArg(tc.Arguments, "topic")
+		if err != nil {
+			return nil, err
+		}
+		content, err := stringArg(tc.Arguments, "content")
+		if err != nil {
+			return nil, err
+		}
+		return &toolExecution{
+			name:        tc.Name,
+			request:     KBWriteRequest{Topic: topic, Content: content},
+			commandText: fmt.Sprintf("write knowledge base: %s", topic),
+			riskLevel:   strings.ToLower(optionalStringArg(tc.Arguments, "risk_level")),
+			riskReason:  optionalStringArg(tc.Arguments, "risk_reason"),
+			description: optionalStringArg(tc.Arguments, "description"),
+			thought:     optionalStringArg(tc.Arguments, "thought"),
+		}, nil
+	}
+
 	meta, err := extractToolMeta(tc.Arguments, defaultHost, creds)
 	if err != nil {
 		return nil, err
@@ -386,6 +440,12 @@ func extractToolMeta(args map[string]interface{}, defaultHost string, creds repa
 
 func executeStructuredTool(client *MCPServerClient, exec *toolExecution) (*ToolCallResult, error) {
 	switch req := exec.request.(type) {
+	case ServiceResourceRequest:
+		return client.ReadServiceResource(req)
+	case KBRequest:
+		return client.ReadKnowledgeBase(req)
+	case KBWriteRequest:
+		return client.WriteKnowledgeBase(req)
 	case ServiceStatusRequest:
 		return client.InspectServiceStatus(req)
 	case ServiceLogsRequest:
