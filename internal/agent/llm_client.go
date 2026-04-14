@@ -41,6 +41,8 @@ type LLMClient struct {
 	history []openai.ChatCompletionMessageParamUnion
 }
 
+const maxHistoryMessages = 40
+
 func NewLLMClient(cfg LLMConfig) *LLMClient {
 	return &LLMClient{
 		cfg:     cfg,
@@ -51,14 +53,17 @@ func NewLLMClient(cfg LLMConfig) *LLMClient {
 
 func (c *LLMClient) SetSystemPrompt(prompt string) {
 	c.history = append([]openai.ChatCompletionMessageParamUnion{openai.SystemMessage(prompt)}, c.history...)
+	c.pruneHistory()
 }
 
 func (c *LLMClient) AddUserMessage(content string) {
 	c.history = append(c.history, openai.UserMessage(content))
+	c.pruneHistory()
 }
 
 func (c *LLMClient) AddToolResult(toolCallID, content string) {
 	c.history = append(c.history, openai.ToolMessage(toolCallID, content))
+	c.pruneHistory()
 }
 
 func (c *LLMClient) Call(ctx context.Context) (*LLMResponse, error) {
@@ -78,6 +83,7 @@ func (c *LLMClient) Call(ctx context.Context) (*LLMResponse, error) {
 
 	msg := resp.Choices[0].Message
 	c.history = append(c.history, msg.ToParam())
+	c.pruneHistory()
 
 	result := &LLMResponse{}
 	if len(msg.ToolCalls) > 0 {
@@ -94,6 +100,26 @@ func (c *LLMClient) Call(ctx context.Context) (*LLMResponse, error) {
 	result.Content = strings.TrimSpace(msg.Content)
 	result.IsFinish = true
 	return result, nil
+}
+
+func (c *LLMClient) pruneHistory() {
+	if len(c.history) <= maxHistoryMessages {
+		return
+	}
+	// Keep the first system message (if present) and the latest messages.
+	if len(c.history) > 0 && c.history[0].OfSystem != nil {
+		keepTail := maxHistoryMessages - 1
+		if keepTail < 1 {
+			keepTail = 1
+		}
+		start := len(c.history) - keepTail
+		if start < 1 {
+			start = 1
+		}
+		c.history = append([]openai.ChatCompletionMessageParamUnion{c.history[0]}, c.history[start:]...)
+		return
+	}
+	c.history = c.history[len(c.history)-maxHistoryMessages:]
 }
 
 func buildToolParams() []openai.ChatCompletionToolUnionParam {

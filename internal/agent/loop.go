@@ -165,14 +165,19 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 					status = "failed"
 				}
 				lastActionSuccess = toolResult.Success
-				lastActionOutput = strings.TrimSpace(toolResult.Output + "\n" + toolResult.Stderr)
-				_ = actionMapper.UpdateFields(action.ID, map[string]interface{}{"status": status, "output": lastActionOutput, "exit_code": toolResult.ExitCode, "duration_ms": int(toolResult.DurationMs), "executed_at": &finishedAt})
+				rawActionOutput := strings.TrimSpace(toolResult.Output + "\n" + toolResult.Stderr)
+				lastActionOutput = rawActionOutput
+				if len(lastActionOutput) > 1200 {
+					lastActionOutput = lastActionOutput[:1200] + "..."
+				}
+				_ = actionMapper.UpdateFields(action.ID, map[string]interface{}{"status": status, "output": rawActionOutput, "exit_code": toolResult.ExitCode, "duration_ms": int(toolResult.DurationMs), "executed_at": &finishedAt})
 				monitorCtrl.RepairActionsTotal.WithLabelValues(exec.name, status, exec.riskLevel).Inc()
 				monitorCtrl.RepairActionDuration.WithLabelValues(exec.name, status).Observe(float64(toolResult.DurationMs) / 1000.0)
 				publishSessionProgress(sessionMapper, hub, sessionID, "executing", actionOrder, countCompletedActions(actionMapper, sessionID))
 				hub.Publish(repair.SSEEvent{Type: repair.EventActionResult, SessionID: sessionID, Payload: repair.ActionResultPayload{ActionID: action.ID, Status: status, Output: toolResult.Output, ErrorMsg: toolResult.Stderr, ExitCode: toolResult.ExitCode, DurationMs: int(toolResult.DurationMs)}})
 
-				resultJSON, _ := json.Marshal(map[string]interface{}{"success": toolResult.Success, "output": toolResult.Output, "stderr": toolResult.Stderr, "exit_code": toolResult.ExitCode, "duration_ms": toolResult.DurationMs})
+				compacted := CompactToolResult(exec.name, exec.commandText, toolResult)
+				resultJSON, _ := json.Marshal(compacted)
 				llmClient.AddToolResult(tc.ID, string(resultJSON))
 				if exec.name == "validate_nginx_config" && toolResult.Success {
 					llmClient.AddUserMessage("nginx 配置验证已成功。下一步必须调用 submit_diagnosis_report 提交最终结论，不要继续重复取证。")
