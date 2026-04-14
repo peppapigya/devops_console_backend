@@ -2,20 +2,21 @@ package agent
 
 import (
 	"context"
-	monitorCtrl "devops-console-backend/internal/controllers/monitor"
-	"devops-console-backend/internal/dal/mapper"
-	"devops-console-backend/internal/dal/model"
-	"devops-console-backend/internal/services/repair"
 	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	monitorCtrl "devops-console-backend/internal/controllers/monitor"
+	"devops-console-backend/internal/dal/mapper"
+	"devops-console-backend/internal/dal/model"
+	"devops-console-backend/internal/services/repair"
+
 	"github.com/bytedance/gopkg/util/logger"
 )
 
-const defaultMaxRounds = 10
+const defaultMaxRounds = 12
 
 type reportConclusion struct {
 	Summary        string   `json:"summary"`
@@ -54,15 +55,16 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 	llmClient := NewLLMClient(LLMConfig{APIKey: cfg.LLMAPIKey, BaseURL: cfg.LLMBaseURL, Model: cfg.LLMModel})
 	systemPrompt := BuildSystemPrompt(logHost)
 	initialUserMsg := BuildInitialUserMessage(logMessage, logHost, logService, logLevel, creds.User, creds.Password, creds.Port)
+	resourceGuide := "在开始现场取证前，优先调用 read_service_resource 读取与当前服务同名的知识资源；若资源不存在，再尝试 read_knowledge_base，最后才结合现场证据做保守推理。"
 	llmClient.SetSystemPrompt(systemPrompt)
 	llmClient.AddUserMessage(initialUserMsg)
-	llmClient.AddUserMessage("在开始现场取证前，优先调用 read_service_resource 读取与当前服务同名的知识资源；若资源不存在，再尝试 read_knowledge_base，最后才结合现场证据做保守推理。")
+	llmClient.AddUserMessage(resourceGuide)
 
 	now := time.Now()
 	_ = msgMapper.BatchCreate([]*model.SessionMessage{
 		{SessionID: sessionID, Role: "system", Content: systemPrompt, CreatedAt: &now},
 		{SessionID: sessionID, Role: "user", Content: initialUserMsg, CreatedAt: &now},
-		{SessionID: sessionID, Role: "user", Content: "在开始现场取证前，优先调用 read_service_resource 读取与当前服务同名的知识资源；若资源不存在，再尝试 read_knowledge_base，最后才结合现场证据做保守推理。", CreatedAt: &now},
+		{SessionID: sessionID, Role: "user", Content: resourceGuide, CreatedAt: &now},
 	})
 
 	actionOrder := 0
@@ -70,12 +72,15 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 	lastActionOutput := ""
 	lastValidationSucceeded := false
 	commandAttempts := map[string]int{}
+	serviceResourceHit := false
+	postWriteReadRequired := false
+	lastWrittenFile := ""
 
 	for round := 0; round < maxRounds; round++ {
 		hub.Publish(repair.SSEEvent{
 			Type:      repair.EventThinking,
 			SessionID: sessionID,
-			Payload:   repair.ThinkingPayload{Content: fmt.Sprintf("绗?%d 杞細姝ｅ湪鏀堕泦璇佹嵁骞惰瘎浼颁笅涓€姝?..", round+1)},
+			Payload:   repair.ThinkingPayload{Content: fmt.Sprintf("第 %d 轮：正在收集证据并评估下一步...", round+1)},
 		})
 
 		llmResp, err := llmClient.Call(context.Background())
@@ -97,6 +102,23 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 					llmClient.AddToolResult(tc.ID, fmt.Sprintf(`{"error":%q}`, err.Error()))
 					continue
 				}
+
+				if exec.name == "read_knowledge_base" {
+					if req, ok := exec.request.(KBRequest); ok && strings.EqualFold(strings.TrimSpace(req.Topic), strings.TrimSpace(logService)) && serviceResourceHit {
+						blockMsg := fmt.Sprintf("当前服务 %s 已成功命中 service resource，不要再重复读取同主题 knowledge base；请直接依据资源内容继续取证和修复。", logService)
+						llmClient.AddToolResult(tc.ID, fmt.Sprintf(`{"success":false,"error":%q}`, blockMsg))
+						llmClient.AddUserMessage(blockMsg)
+						continue
+					}
+				}
+
+				if postWriteReadRequired && exec.name != "inspect_file_snippet" {
+					blockMsg := fmt.Sprintf("刚刚修改过文件 %s，下一步必须先重新读取同一文件确认改动，再继续其他动作。", lastWrittenFile)
+					llmClient.AddToolResult(tc.ID, fmt.Sprintf(`{"success":false,"error":%q}`, blockMsg))
+					llmClient.AddUserMessage(blockMsg)
+					continue
+				}
+
 				commandKey := strings.TrimSpace(exec.name + "::" + exec.commandText)
 				if commandKey != "::" && commandAttempts[commandKey] >= 2 {
 					msg := "检测到重复执行同一命令。请基于新假设选择不同工具，或直接调用 submit_diagnosis_report 提交结论。"
@@ -157,7 +179,17 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 				if exec.riskLevel == "high" {
 					_ = actionMapper.UpdateFields(action.ID, map[string]interface{}{"status": "waiting_confirm"})
 					publishSessionProgress(sessionMapper, hub, sessionID, "waiting_approval", actionOrder, actionOrder-1)
-					hub.Publish(repair.SSEEvent{Type: repair.EventWaitConfirm, SessionID: sessionID, Payload: repair.WaitConfirmPayload{ActionID: action.ID, ActionOrder: actionOrder, Description: exec.description, Command: exec.commandText, RiskReason: exec.riskReason}})
+					hub.Publish(repair.SSEEvent{
+						Type:      repair.EventWaitConfirm,
+						SessionID: sessionID,
+						Payload: repair.WaitConfirmPayload{
+							ActionID:    action.ID,
+							ActionOrder: actionOrder,
+							Description: exec.description,
+							Command:     exec.commandText,
+							RiskReason:  exec.riskReason,
+						},
+					})
 					confirmCh := repair.RegisterConfirmWait(sessionID, action.ID)
 					approved := false
 					select {
@@ -175,7 +207,19 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 				}
 
 				_ = actionMapper.UpdateFields(action.ID, map[string]interface{}{"status": "running"})
-				hub.Publish(repair.SSEEvent{Type: repair.EventActionStart, SessionID: sessionID, Payload: repair.ActionStartPayload{ActionID: action.ID, ActionOrder: actionOrder, ToolName: exec.name, Thought: exec.thought, Description: exec.description, Command: exec.commandText, Target: exec.target}})
+				hub.Publish(repair.SSEEvent{
+					Type:      repair.EventActionStart,
+					SessionID: sessionID,
+					Payload: repair.ActionStartPayload{
+						ActionID:    action.ID,
+						ActionOrder: actionOrder,
+						ToolName:    exec.name,
+						Thought:     exec.thought,
+						Description: exec.description,
+						Command:     exec.commandText,
+						Target:      exec.target,
+					},
+				})
 
 				toolResult, toolErr := executeStructuredTool(mcpClient, exec)
 				finishedAt := time.Now()
@@ -183,9 +227,24 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 					if exec.name == "validate_nginx_config" {
 						lastValidationSucceeded = false
 					}
-					_ = actionMapper.UpdateFields(action.ID, map[string]interface{}{"status": "failed", "error_msg": toolErr.Error(), "exit_code": -1, "duration_ms": 0, "executed_at": &finishedAt})
+					_ = actionMapper.UpdateFields(action.ID, map[string]interface{}{
+						"status":      "failed",
+						"error_msg":   toolErr.Error(),
+						"exit_code":   -1,
+						"duration_ms": 0,
+						"executed_at": &finishedAt,
+					})
 					monitorCtrl.RepairActionsTotal.WithLabelValues(exec.name, "failed", exec.riskLevel).Inc()
-					hub.Publish(repair.SSEEvent{Type: repair.EventActionResult, SessionID: sessionID, Payload: repair.ActionResultPayload{ActionID: action.ID, Status: "failed", ErrorMsg: toolErr.Error(), ExitCode: -1}})
+					hub.Publish(repair.SSEEvent{
+						Type:      repair.EventActionResult,
+						SessionID: sessionID,
+						Payload: repair.ActionResultPayload{
+							ActionID: action.ID,
+							Status:   "failed",
+							ErrorMsg: toolErr.Error(),
+							ExitCode: -1,
+						},
+					})
 					llmClient.AddToolResult(tc.ID, fmt.Sprintf(`{"success":false,"error":%q,"exit_code":-1}`, toolErr.Error()))
 					if exec.name == "replace_file_content" {
 						llmClient.AddUserMessage("文件修改工具执行失败，文件大概率尚未变化。请先重新读取文件当前内容，再基于精确原文重新替换，或改用其他可证明修改成功的方式。")
@@ -202,36 +261,79 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 				}
 				if exec.name == "replace_file_content" {
 					lastValidationSucceeded = false
+					postWriteReadRequired = toolResult.Success
+					if req, ok := exec.request.(FileReplaceRequest); ok {
+						lastWrittenFile = req.FilePath
+					}
 				}
+				if exec.name == "inspect_file_snippet" {
+					if req, ok := exec.request.(FileSnippetRequest); ok && postWriteReadRequired && sameFile(req.FilePath, lastWrittenFile) {
+						postWriteReadRequired = false
+					}
+				}
+				if exec.name == "read_service_resource" && toolResult.Success {
+					serviceResourceHit = true
+				}
+
 				lastActionSuccess = toolResult.Success
 				rawActionOutput := strings.TrimSpace(toolResult.Output + "\n" + toolResult.Stderr)
 				lastActionOutput = rawActionOutput
 				if len(lastActionOutput) > 1200 {
 					lastActionOutput = lastActionOutput[:1200] + "..."
 				}
-				_ = actionMapper.UpdateFields(action.ID, map[string]interface{}{"status": status, "output": rawActionOutput, "exit_code": toolResult.ExitCode, "duration_ms": int(toolResult.DurationMs), "executed_at": &finishedAt})
+
+				_ = actionMapper.UpdateFields(action.ID, map[string]interface{}{
+					"status":      status,
+					"output":      rawActionOutput,
+					"exit_code":   toolResult.ExitCode,
+					"duration_ms": int(toolResult.DurationMs),
+					"executed_at": &finishedAt,
+				})
 				monitorCtrl.RepairActionsTotal.WithLabelValues(exec.name, status, exec.riskLevel).Inc()
 				monitorCtrl.RepairActionDuration.WithLabelValues(exec.name, status).Observe(float64(toolResult.DurationMs) / 1000.0)
 				publishSessionProgress(sessionMapper, hub, sessionID, "executing", actionOrder, countCompletedActions(actionMapper, sessionID))
-				hub.Publish(repair.SSEEvent{Type: repair.EventActionResult, SessionID: sessionID, Payload: repair.ActionResultPayload{ActionID: action.ID, Status: status, Output: toolResult.Output, ErrorMsg: toolResult.Stderr, ExitCode: toolResult.ExitCode, DurationMs: int(toolResult.DurationMs)}})
+				hub.Publish(repair.SSEEvent{
+					Type:      repair.EventActionResult,
+					SessionID: sessionID,
+					Payload: repair.ActionResultPayload{
+						ActionID:   action.ID,
+						Status:     status,
+						Output:     toolResult.Output,
+						ErrorMsg:   toolResult.Stderr,
+						ExitCode:   toolResult.ExitCode,
+						DurationMs: int(toolResult.DurationMs),
+					},
+				})
 
 				compacted := CompactToolResult(exec.name, exec.commandText, toolResult)
 				resultJSON, _ := json.Marshal(compacted)
 				llmClient.AddToolResult(tc.ID, string(resultJSON))
+
+				if exec.name == "read_service_resource" && toolResult.Success && strings.EqualFold(strings.TrimSpace(logService), "nginx") {
+					llmClient.AddUserMessage("你已命中 nginx 专属知识资源。该资源明确要求：遇到 unexpected \"}\" 时，优先检查上一行是否缺少分号，绝对不要把删除右大括号作为默认修复动作。下一步请读取带行号的文件内容，定位缺少分号的具体指令。")
+				}
+				if exec.name == "read_service_resource" && !toolResult.Success {
+					llmClient.AddUserMessage("当前服务没有命中的知识资源。请继续现场取证；如有相关通用主题，也可以改用 read_knowledge_base 读取知识库，再结合命令输出完成诊断。")
+				}
+				if exec.name == "inspect_file_snippet" && strings.EqualFold(strings.TrimSpace(logService), "nginx") && seemsMissingSemicolonBeforeBrace(toolResult.Output) {
+					llmClient.AddUserMessage("根据刚才的文件回读，问题更像是右大括号上一条 nginx 指令缺少分号，而不是多余的右大括号。请优先补分号，不要删除 }。")
+				}
 				if exec.name == "validate_nginx_config" && toolResult.Success {
 					llmClient.AddUserMessage("nginx 配置验证已成功。下一步必须调用 submit_diagnosis_report 提交最终结论，不要继续重复取证。")
 				} else if exec.name == "validate_nginx_config" && !toolResult.Success {
 					llmClient.AddUserMessage("配置验证失败，说明修复尚未生效。不要继续重启服务，也不要声称已修复成功；请重新读取文件内容，确认实际文件与错误行，再调整修复方案。")
 				}
-				if exec.name == "read_service_resource" && !toolResult.Success {
-					llmClient.AddUserMessage("当前服务没有命中的知识资源。请继续现场取证；如有相关通用主题，也可以改用 read_knowledge_base 读取知识库，再结合命令输出完成诊断。")
-				}
 				if exec.name == "replace_file_content" && !toolResult.Success {
 					llmClient.AddUserMessage("replace_file_content 返回失败时，文件当前内容大概率没有按预期改动。尤其当错误是 search text not found 时，必须重新读取文件，并使用精确匹配的原文后再尝试修改。")
 				}
+				if exec.name == "replace_file_content" && toolResult.Success {
+					llmClient.AddUserMessage("文件修改已执行。下一步必须先重新读取同一文件确认实际改动结果，再执行验证命令；不要直接提交结论，也不要直接重启服务。")
+				}
+
 				msgNow := time.Now()
 				_ = msgMapper.BatchCreate([]*model.SessionMessage{{SessionID: sessionID, Role: "tool", Content: string(resultJSON), CreatedAt: &msgNow}})
 			}
+
 			if round >= maxRounds-2 {
 				llmClient.AddUserMessage("你即将达到最大轮次。请立即收敛，并调用 submit_diagnosis_report 输出最终报告。")
 			}
@@ -575,4 +677,29 @@ func boolArg(args map[string]interface{}, key string, fallback bool) bool {
 		}
 	}
 	return fallback
+}
+
+func sameFile(left, right string) bool {
+	l := strings.TrimSpace(strings.ReplaceAll(left, "\\", "/"))
+	r := strings.TrimSpace(strings.ReplaceAll(right, "\\", "/"))
+	return strings.EqualFold(l, r)
+}
+
+func seemsMissingSemicolonBeforeBrace(content string) bool {
+	lines := strings.Split(content, "\n")
+	for i := 0; i < len(lines)-1; i++ {
+		current := strings.TrimSpace(lines[i])
+		next := strings.TrimSpace(lines[i+1])
+		if current == "" || strings.HasPrefix(current, "#") {
+			continue
+		}
+		if next != "}" {
+			continue
+		}
+		if strings.HasSuffix(current, ";") || strings.HasSuffix(current, "{") || strings.HasSuffix(current, "}") {
+			continue
+		}
+		return true
+	}
+	return false
 }
