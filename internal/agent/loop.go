@@ -318,6 +318,9 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 				if exec.name == "inspect_file_snippet" && strings.EqualFold(strings.TrimSpace(logService), "nginx") && seemsMissingSemicolonBeforeBrace(toolResult.Output) {
 					llmClient.AddUserMessage("根据刚才的文件回读，问题更像是右大括号上一条 nginx 指令缺少分号，而不是多余的右大括号。请优先补分号，不要删除 }。")
 				}
+				if exec.name == "inspect_file_snippet" {
+					llmClient.AddUserMessage("如果下一步需要调用 replace_file_content，search 必须直接使用刚刚回读结果里的完整原始文本片段，不要凭推测改写目标行，也不要自行变更其他行。")
+				}
 				if exec.name == "validate_nginx_config" && toolResult.Success {
 					llmClient.AddUserMessage("nginx 配置验证已成功。下一步必须调用 submit_diagnosis_report 提交最终结论，不要继续重复取证。")
 				} else if exec.name == "validate_nginx_config" && !toolResult.Success {
