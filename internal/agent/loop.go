@@ -66,6 +66,7 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 	actionOrder := 0
 	lastActionSuccess := true
 	lastActionOutput := ""
+	lastValidationSucceeded := false
 	commandAttempts := map[string]int{}
 
 	for round := 0; round < maxRounds; round++ {
@@ -127,6 +128,30 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 				monitorCtrl.RepairActionsTotal.WithLabelValues(exec.name, "created", exec.riskLevel).Inc()
 				publishSessionProgress(sessionMapper, hub, sessionID, "analyzing", actionOrder, actionOrder-1)
 
+				if exec.name == "restart_service" && !lastValidationSucceeded {
+					blockMsg := "禁止执行服务重启：最近一次配置验证未成功，必须先完成成功验证后才能重启服务。"
+					_ = actionMapper.UpdateFields(action.ID, map[string]interface{}{
+						"status":      "failed",
+						"error_msg":   blockMsg,
+						"exit_code":   -1,
+						"duration_ms": 0,
+					})
+					monitorCtrl.RepairActionsTotal.WithLabelValues(exec.name, "failed", exec.riskLevel).Inc()
+					hub.Publish(repair.SSEEvent{
+						Type:      repair.EventActionResult,
+						SessionID: sessionID,
+						Payload: repair.ActionResultPayload{
+							ActionID: action.ID,
+							Status:   "failed",
+							ErrorMsg: blockMsg,
+							ExitCode: -1,
+						},
+					})
+					llmClient.AddToolResult(tc.ID, fmt.Sprintf(`{"success":false,"error":%q,"exit_code":-1}`, blockMsg))
+					llmClient.AddUserMessage("不要在配置验证失败后继续重启服务。请重新读取目标文件，确认实际内容与待修改片段完全一致，再修复并重新验证。")
+					continue
+				}
+
 				if exec.riskLevel == "high" {
 					_ = actionMapper.UpdateFields(action.ID, map[string]interface{}{"status": "waiting_confirm"})
 					publishSessionProgress(sessionMapper, hub, sessionID, "waiting_approval", actionOrder, actionOrder-1)
@@ -153,16 +178,28 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 				toolResult, toolErr := executeStructuredTool(mcpClient, exec)
 				finishedAt := time.Now()
 				if toolErr != nil {
+					if exec.name == "validate_nginx_config" {
+						lastValidationSucceeded = false
+					}
 					_ = actionMapper.UpdateFields(action.ID, map[string]interface{}{"status": "failed", "error_msg": toolErr.Error(), "exit_code": -1, "duration_ms": 0, "executed_at": &finishedAt})
 					monitorCtrl.RepairActionsTotal.WithLabelValues(exec.name, "failed", exec.riskLevel).Inc()
 					hub.Publish(repair.SSEEvent{Type: repair.EventActionResult, SessionID: sessionID, Payload: repair.ActionResultPayload{ActionID: action.ID, Status: "failed", ErrorMsg: toolErr.Error(), ExitCode: -1}})
 					llmClient.AddToolResult(tc.ID, fmt.Sprintf(`{"success":false,"error":%q,"exit_code":-1}`, toolErr.Error()))
+					if exec.name == "replace_file_content" {
+						llmClient.AddUserMessage("文件修改工具执行失败，文件大概率尚未变化。请先重新读取文件当前内容，再基于精确原文重新替换，或改用其他可证明已修改成功的方式。")
+					}
 					continue
 				}
 
 				status := "success"
 				if !toolResult.Success {
 					status = "failed"
+				}
+				if exec.name == "validate_nginx_config" {
+					lastValidationSucceeded = toolResult.Success
+				}
+				if exec.name == "replace_file_content" {
+					lastValidationSucceeded = false
 				}
 				lastActionSuccess = toolResult.Success
 				rawActionOutput := strings.TrimSpace(toolResult.Output + "\n" + toolResult.Stderr)
@@ -181,6 +218,11 @@ func RunAgentLoop(sessionID string, logMessage, logHost, logService, logLevel st
 				llmClient.AddToolResult(tc.ID, string(resultJSON))
 				if exec.name == "validate_nginx_config" && toolResult.Success {
 					llmClient.AddUserMessage("nginx 配置验证已成功。下一步必须调用 submit_diagnosis_report 提交最终结论，不要继续重复取证。")
+				} else if exec.name == "validate_nginx_config" && !toolResult.Success {
+					llmClient.AddUserMessage("配置验证失败，说明修复尚未生效。不要继续重启服务，也不要声称已修复成功；请重新读取文件内容，确认实际文件与错误行，再调整修复方案。")
+				}
+				if exec.name == "replace_file_content" && !toolResult.Success {
+					llmClient.AddUserMessage("replace_file_content 返回失败，文件当前内容大概率没有按预期改动。尤其当错误为 search text not found 时，必须重新读取文件并使用精确匹配的原文后再尝试修改。")
 				}
 				msgNow := time.Now()
 				_ = msgMapper.BatchCreate([]*model.SessionMessage{{SessionID: sessionID, Role: "tool", Content: string(resultJSON), CreatedAt: &msgNow}})

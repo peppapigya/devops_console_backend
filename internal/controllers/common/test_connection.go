@@ -422,15 +422,27 @@ func GetTodayTestStats(r *gin.Context) {
 	}
 
 	totalTests := stats["total_tests"].(int64)
-	instanceTests := stats["instance_tests"].([]struct {
+	instanceTestCounts := make(map[string]int64)
+	switch instanceTests := stats["instance_tests"].(type) {
+	case []struct {
+		InstanceID int    `json:"instance_id"`
+		Name       string `json:"name"`
+		Count      int64  `json:"count"`
+	}:
+		for _, instanceTest := range instanceTests {
+			instanceTestCounts[strconv.FormatInt(int64(instanceTest.InstanceID), 10)] = instanceTest.Count
+		}
+	case []struct {
 		InstanceID uint   `json:"instance_id"`
 		Name       string `json:"name"`
 		Count      int64  `json:"count"`
-	})
-
-	instanceTestCounts := make(map[string]int64)
-	for _, instanceTest := range instanceTests {
-		instanceTestCounts[strconv.FormatInt(int64(instanceTest.InstanceID), 10)] = instanceTest.Count
+	}:
+		for _, instanceTest := range instanceTests {
+			instanceTestCounts[strconv.FormatInt(int64(instanceTest.InstanceID), 10)] = instanceTest.Count
+		}
+	default:
+		helper.InternalError("今日测试统计数据格式异常")
+		return
 	}
 
 	logs.Debug(map[string]interface{}{

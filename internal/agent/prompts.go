@@ -42,7 +42,7 @@ func BuildSystemPrompt(host string) string {
 	if hostInfo == "" {
 		hostInfo = "(auto-discovered from incident context)"
 	}
-	return fmt.Sprintf(systemPromptTemplate, hostInfo)
+	return fmt.Sprintf(systemPromptTemplate, hostInfo) + "\n额外约束：若 replace_file_content 返回 search text not found 或其他失败结果，视为文件未修改成功；必须先重新读取文件当前内容，再决定下一步，禁止直接声称已修复或继续重启服务。"
 }
 
 func BuildInitialUserMessage(logMessage, logHost, logService, logLevel string, sshUser, sshPassword string, sshPort int) string {
