@@ -1,108 +1,107 @@
-# DevOps Console 配置文件
-# 支持环境变量覆盖，如: DEVOPS_DATABASE_HOST, DEVOPS_DATABASE_PORT, DEVOPS_DATABASE_USER, DEVOPS_DATABASE_PASSWORD, DEVOPS_DATABASE_NAME
-
-# 服务配置
 server:
   port: ":8081"
-  log_level: "info"  # debug, info, warn, error
+  log_level: "info"
 
-# 数据库配置
 database:
-  type: "mysql"  # 仅支持MySQL
-  auto_migrate: true  # 是否自动迁移数据库模型
-
-  # MySQL配置
+  type: "mysql"
+  auto_migrate: true
   mysql:
-    #    host: "mysql"  # Docker容器中的服务名
-    #    port: 3306
-    #    username: "devops"  # Docker环境中的用户
-    #    password: "devops123456"  # Docker环境中的密码
-    #    database: "devops_console"
-    #    host: "47.104.247.159"  # Docker容器中的服务名
-    #    port: 8002
-    #    username: "root"  # Docker环境中的用户
-    #    password: "peppa-pig"  # Docker环境中的密码
-    #    database: "devops_console"
-    host: "127.0.0.1"  # Docker容器中的服务名
+    host: "127.0.0.1"
     port: 3306
-    username: "root"  # Docker环境中的用户
-    password: "Wjk990921"  # Docker环境中的密码
+    username: "root"
+    password: "123456"
     database: "devops"
     charset: "utf8mb4"
     parse_time: true
     max_open_conns: 10
     max_idle_conns: 5
 
-# 日志配置
 logging:
-  format: "json"  # json, text
+  format: "json"
   time_format: "2006-01-02 15:04:05"
   report_caller: true
 
-# 应用配置
 app:
   name: "DevOps Console"
   version: "1.0.0"
-  environment: "development"  # development, production
+  environment: "development"
 
-# Elasticsearch配置
 elasticsearch:
-  timeout: 30  # 连接超时时间（秒）
-  retry: 3    # 重试次数
-  health_check_interval: 60  # 健康检查间隔（秒）
+  timeout: 30
+  retry: 3
+  health_check_interval: 60
 
-# Kubernetes配置
 kubernetes:
-  config_path: ""  # kubeconfig文件路径，为空时使用集群内配置
-  timeout: 30      # 操作超时时间（秒）
-  retry: 3         # 重试次数
+  config_path: ""
+  timeout: 30
+  retry: 3
 
-# Swagger配置
 swagger:
   enabled: true
   host: "localhost:8081"
   base_path: "/"
 
-# 健康检查配置
 health:
   enabled: true
   endpoint: "/health"
-  interval: 30  # 检查间隔（秒）
+  interval: 30
 
 redis:
   host: 47.104.247.159
   port: 8001
   password: "peppa-pig"
   db: 0
+
 ai:
   mcp:
     enabled: true
     url: "http://127.0.0.1:8080"
     token: "" # apikey
     max_retries: 3
+    llm_api_key: "sk-50d4a2672xxxxxxxxxxxxxxxx"
+    llm_base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    llm_model: "glm-4.7"
+    max_rounds: 10
 
 jwt:
   secret: "n02y2Zqf4eL0hZ4xjQH9w1zDk1w5FqMnc9R+N8T1v2E="
-  expire-time: 3600 # 单位为秒
+  expire-time: 3600
   refresh-expire-time: 604800
   exclude-paths:
     - /api/v1/system/login
     - /api/v1/sysUser/refresh
     - /api/v1/sysUser/captcha
+    - /api/v1/monitor/alertmanager/webhook
     - /swagger/*
     - /jobs/script/
     - /metrics
     - /ws/*
     - /health
 
-# 加密配置 (用于敏感数据如主机密码等)
 encryption:
-  key: "So722DGlBzRASCG9so/Knfuy81cdhQ7gArgZjcJHvpQ="  # AES-256 key, base64 encoded, 32 bytes
-
+  key: "So722DGlBzRASCG9so/Knfuy81cdhQ7gArgZjcJHvpQ="
 
 feishu:
-  webhook: "https://open.feishu.cn/open-apis/bot/v2/hook/xxx" # 飞书 webhook地址
-  secret: "" # 飞书 secret
-  appId: "" # 飞书 appId 机器人签名校验可能用
-  appSecret: "" # 飞书 appSecret 调用飞书开放平台 API 才用
-  enabled: true # 是否开启该功能
+  webhook: "https://open.feishu.cn/open-apis/bot/v2/hook/xxx"
+  secret: ""
+  appId: ""
+  appSecret: ""
+  enabled: true
+
+alerting:
+  console_base_url: "http://localhost:5173"
+  alertmanager:
+    enabled: true
+    auth_header: "X-Alertmanager-Token"
+    webhook_secret: ""
+  analysis:
+    auto_create_session: true
+    poll_interval_seconds: 5
+    poll_timeout_seconds: 900
+  feishu:
+    notify_on_firing: true
+    notify_on_result: true
+    notify_on_resolved: true
+  asset_mapping:
+    enabled: true
+    allow_no_credential: true
