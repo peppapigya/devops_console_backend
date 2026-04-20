@@ -52,6 +52,7 @@ func migrateRepairSchema(db *gorm.DB) error {
 		&model.SessionMessage{},
 		&model.RepairAction{},
 		&model.RepairSessionEvent{},
+		&model.AlertDispatch{},
 	); err != nil {
 		return err
 	}

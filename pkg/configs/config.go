@@ -116,6 +116,37 @@ type FeiShuConfig struct {
 	AppSecret  string `mapstructure:"appSecret"`
 }
 
+type AlertingConfig struct {
+	Alertmanager   AlertmanagerConfig     `mapstructure:"alertmanager" yaml:"alertmanager"`
+	Analysis       AlertingAnalysisConfig `mapstructure:"analysis" yaml:"analysis"`
+	FeiShu         AlertingFeiShuConfig   `mapstructure:"feishu" yaml:"feishu"`
+	AssetMapping   AssetMappingConfig     `mapstructure:"asset_mapping" yaml:"asset_mapping"`
+	ConsoleBaseURL string                 `mapstructure:"console_base_url" yaml:"console_base_url"`
+}
+
+type AlertmanagerConfig struct {
+	Enabled       bool   `mapstructure:"enabled" yaml:"enabled"`
+	WebhookSecret string `mapstructure:"webhook_secret" yaml:"webhook_secret"`
+	AuthHeader    string `mapstructure:"auth_header" yaml:"auth_header"`
+}
+
+type AlertingAnalysisConfig struct {
+	AutoCreateSession   bool `mapstructure:"auto_create_session" yaml:"auto_create_session"`
+	PollIntervalSeconds int  `mapstructure:"poll_interval_seconds" yaml:"poll_interval_seconds"`
+	PollTimeoutSeconds  int  `mapstructure:"poll_timeout_seconds" yaml:"poll_timeout_seconds"`
+}
+
+type AlertingFeiShuConfig struct {
+	NotifyOnFiring   bool `mapstructure:"notify_on_firing" yaml:"notify_on_firing"`
+	NotifyOnResult   bool `mapstructure:"notify_on_result" yaml:"notify_on_result"`
+	NotifyOnResolved bool `mapstructure:"notify_on_resolved" yaml:"notify_on_resolved"`
+}
+
+type AssetMappingConfig struct {
+	Enabled           bool `mapstructure:"enabled" yaml:"enabled"`
+	AllowNoCredential bool `mapstructure:"allow_no_credential" yaml:"allow_no_credential"`
+}
+
 type AppConfig struct {
 	Server        ServerConfig        `mapstructure:"server" yaml:"server"`
 	Database      DatabaseConfig      `mapstructure:"database" yaml:"database"`
@@ -127,6 +158,7 @@ type AppConfig struct {
 	AiConfig      AiConfig            `mapstructure:"ai"`
 	Encryption    EncryptionConfig    `mapstructure:"encryption" yaml:"encryption"`
 	FeiShuConfig  FeiShuConfig        `mapstructure:"feishu" yaml:"feishu"`
+	Alerting      AlertingConfig      `mapstructure:"alerting" yaml:"alerting"`
 }
 
 // initLogConfig 初始化日志配置
@@ -213,6 +245,10 @@ func GetEncryptionKey() ([]byte, error) {
 // GetAiConfig 获取ai配置文件
 func GetAiConfig() AiConfig {
 	return Config.AiConfig
+}
+
+func GetAlertingConfig() AlertingConfig {
+	return Config.Alerting
 }
 
 // IsDebugMode 判断是否为调试模式
@@ -314,6 +350,16 @@ func setDefaults() {
 	viper.SetDefault("database.mysql.parse_time", true)
 	viper.SetDefault("database.mysql.max_open_conns", 10)
 	viper.SetDefault("database.mysql.max_idle_conns", 5)
+	viper.SetDefault("alerting.alertmanager.enabled", false)
+	viper.SetDefault("alerting.alertmanager.auth_header", "X-Alertmanager-Token")
+	viper.SetDefault("alerting.analysis.auto_create_session", true)
+	viper.SetDefault("alerting.analysis.poll_interval_seconds", 5)
+	viper.SetDefault("alerting.analysis.poll_timeout_seconds", 900)
+	viper.SetDefault("alerting.feishu.notify_on_firing", true)
+	viper.SetDefault("alerting.feishu.notify_on_result", true)
+	viper.SetDefault("alerting.feishu.notify_on_resolved", true)
+	viper.SetDefault("alerting.asset_mapping.enabled", true)
+	viper.SetDefault("alerting.asset_mapping.allow_no_credential", true)
 }
 
 // Initialize 初始化应用配置

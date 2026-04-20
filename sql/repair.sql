@@ -74,3 +74,14 @@ CREATE TABLE IF NOT EXISTS `repair_actions` (
     INDEX `idx_session_id` (`session_id`),
     INDEX `idx_session_order` (`session_id`, `action_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='淇鍔ㄤ綔鎵ц璁板綍';
+
+-- Replayable session event stream
+CREATE TABLE IF NOT EXISTS `repair_session_events` (
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `session_id` VARCHAR(36)     NOT NULL COMMENT '关联的 session id',
+    `event_type` VARCHAR(64)     NOT NULL COMMENT 'SSE event type',
+    `payload`    MEDIUMTEXT               COMMENT '事件 payload JSON',
+    `created_at` DATETIME(3)              COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    INDEX `idx_session_event_id` (`session_id`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='可回放的会话事件流';
